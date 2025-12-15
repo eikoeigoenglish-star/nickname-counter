@@ -1,229 +1,241 @@
 /* style.css */
 
-/* ===== base =============================================================== */
+/* ------------------------------
+   Base
+------------------------------ */
 :root{
-  --bg: #5c6671;          /* ページ背景 */
-  --panel: #4f5863;       /* カード背景 */
-  --panel2: #4a535e;
-  --text: rgba(255,255,255,0.92);
-  --text2: rgba(255,255,255,0.70);
-  --text3: rgba(255,255,255,0.55);
-  --tab: rgba(255,255,255,0.12);
-  --tabActive: rgba(255,255,255,0.18);
-  --tabBorder: rgba(255,255,255,0.25);
+  --bg: #5c6673;
+  --card: rgba(0,0,0,.18);
+  --card2: rgba(255,255,255,.06);
+  --text: #f1f5f9;
+  --muted: rgba(255,255,255,.75);
+  --muted2: rgba(255,255,255,.55);
+
   --radius: 28px;
+  --radius2: 18px;
+
+  --maxw: 1100px;
 }
 
-*{ box-sizing: border-box; }
+*{ box-sizing:border-box; }
 html,body{ height:100%; }
 body{
   margin:0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
-  background: var(--bg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP",
+               "Hiragino Kaku Gothic ProN", "Meiryo", Arial, sans-serif;
   color: var(--text);
+  background: var(--bg);
+  line-height:1.3;
 }
 
-/* ===== header ============================================================= */
+/* ------------------------------
+   Header
+------------------------------ */
 .header{
-  max-width: 1120px;
-  margin: 28px auto 10px;
+  max-width: var(--maxw);
+  margin: 24px auto 10px;
   padding: 0 18px;
-  text-align: center;
+  text-align:center;
 }
 .title{
-  margin: 0 0 6px;
-  font-size: clamp(38px, 5vw, 64px);
-  font-weight: 900;
-  letter-spacing: 0.02em;
+  margin: 18px 0 10px;
+  font-size: clamp(28px, 5vw, 56px);
+  font-weight: 800;
+  letter-spacing: .02em;
 }
 .meta{
-  margin: 0 auto;
-  font-size: 18px;
-  color: var(--text2);
-  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 16px;
+  color: var(--muted);
+  margin-bottom: 10px;
 }
 
-/* ===== tabs =============================================================== */
+/* ------------------------------
+   Tabs
+------------------------------ */
 .tabs{
-  max-width: 1120px;
-  margin: 18px auto 0;
+  max-width: var(--maxw);
+  margin: 18px auto 16px;
   padding: 0 18px;
-  display: flex;
-  gap: 18px;
-  justify-content: center;
+  display:flex;
+  gap: 16px;
+  justify-content:center;
+  flex-wrap: wrap;
 }
+
 .tab{
-  appearance: none;
   border: 0;
-  cursor: pointer;
-  background: var(--tab);
+  cursor:pointer;
   color: var(--text);
-  font-weight: 800;
-  font-size: 18px;
-  padding: 18px 28px;
+  background: rgba(255,255,255,.14);
   border-radius: 18px;
-  outline: none;
-  transition: background .15s ease, box-shadow .15s ease, transform .05s ease;
+  padding: 16px 26px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing:.02em;
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,.06);
 }
-.tab:hover{ background: rgba(255,255,255,0.16); }
-.tab:active{ transform: translateY(1px); }
 .tab.active{
-  background: var(--tabActive);
-  box-shadow: 0 0 0 3px rgba(255,255,255,0.25) inset;
+  background: rgba(255,255,255,.22);
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,.22);
 }
 
-/* ===== layout / panels ==================================================== */
+/* ------------------------------
+   Panels
+------------------------------ */
 .content{
-  max-width: 1120px;
-  margin: 22px auto 40px;
+  max-width: var(--maxw);
+  margin: 0 auto 40px;
   padding: 0 18px;
 }
-.panel{
-  display: none;
-}
-.panel.active{
-  display: block;
-}
+.panel{ display:none; }
+.panel.active{ display:block; }
 
-/* ===== common card ======================================================== */
+/* ------------------------------
+   Card (Tab1/Tab2 common container)
+------------------------------ */
 .card{
-  background: var(--panel);
+  background: var(--card);
   border-radius: var(--radius);
-  padding: 34px 34px 28px;
-  min-height: 560px;
+  padding: 42px 44px;
+  min-height: 520px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.15);
 }
 
-/* ===== Tab1 =============================================================== */
-/*
-  重要：Tab1は
-  - 数字（big-number）
-  - 直下の文言（note-row）
-  - 最下段の小さい数（subline）
-  の順に「上から積む」。
-  これを保証するため、fig-grid は grid で rows を固定。
-*/
+/* ------------------------------
+   Tab1 layout: fig-grid
+   3 rows:
+     1) big number
+     2) note-row (left/right text)  <-- must be "just under number"
+     3) subline
+------------------------------ */
 .fig-grid{
-  display: grid;
+  display:grid;
+  grid-template-columns: 1fr minmax(0, 720px) 1fr;
   grid-template-rows: auto auto auto;
-  row-gap: 34px;
-  align-content: start;   /* ここが効く：縦方向に中央寄せにしない */
-  height: 100%;
+  row-gap: 22px;
+  align-content: start;
 }
 
-/* big number */
+/* big number centered in the middle column */
 .big-number{
-  text-align: center;
-  justify-self: center;
+  grid-column: 2;
+  grid-row: 1;
+  text-align:center;
   font-weight: 900;
-  letter-spacing: 0.02em;
-  line-height: 1;
-  margin-top: 40px;
-}
-.big-number #leftValue,
-.big-number #rightValue{
-  font-size: clamp(86px, 12vw, 170px);
+  letter-spacing:.02em;
+  font-size: clamp(56px, 12vw, 132px);
+  margin-top: 40px; /* 数字を少し下げる（好みで調整） */
 }
 .big-number .dash{
-  font-size: clamp(70px, 10vw, 150px);
-  color: rgba(255,255,255,0.35);
-  padding: 0 18px;
+  display:inline-block;
+  margin: 0 .22em;
+  opacity: .55;
 }
 
-/* notes: left / (empty) / right で固定 */
+/* note row: appears right under the number */
 .note-row{
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: start;
-  width: 100%;
-  margin-top: 6px;        /* 数字の直下感 */
+  grid-column: 2;
+  grid-row: 2;
+
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 24px;
+  align-items:start;
 }
 
-/* left note */
-.note-left{
-  grid-column: 1;
-  justify-self: start;
-  text-align: left;
-}
-
-/* right note */
-.note-right{
-  grid-column: 3;
-  justify-self: end;
-  text-align: right;
-}
-
+/* left/right blocks anchored to edges of the middle column */
 .note{
-  font-weight: 900;
-  color: var(--text2);
-  line-height: 1.18;
-  letter-spacing: 0.02em;
   font-size: 28px;
-
-  /* 「3行はHTMLのdivで固定」なので、勝手な折返しはしない */
-  white-space: nowrap;
-  user-select: none;
-}
-
-/* bottom small line */
-.subline{
-  justify-self: center;
-  display: flex;
-  gap: 56px;
-  color: var(--text3);
-  font-weight: 900;
-  font-size: 28px;
-  user-select: none;
-}
-
-/* ===== Tab2 (chart) ======================================================= */
-.chart-wrap{
-  background: var(--panel);
-  border-radius: var(--radius);
-  padding: 26px 26px 20px;
-  min-height: 560px;
-}
-.chart-wrap canvas{
-  display:block;
-  width: 100% !important;
-  height: 470px !important;
-}
-.desc{
-  margin-top: 18px;
-  color: var(--text3);
   font-weight: 800;
-  text-align: center;
-  line-height: 1.5;
+  color: var(--muted);
+  line-height: 1.1;
+  white-space: nowrap; /* 3行以外に折れない */
+}
+.note-left{ justify-self: start; text-align:left; }
+.note-right{ justify-self: end; text-align:right; }
+
+/* subline centered below note-row */
+.subline{
+  grid-column: 2;
+  grid-row: 3;
+  display:flex;
+  gap: 48px;
+  justify-content:center;
+  align-items:center;
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--muted2);
+  margin-top: 12px;
 }
 
-/* ===== placeholders ======================================================= */
-.placeholder{
-  background: var(--panel);
+/* ------------------------------
+   Tab2 chart
+------------------------------ */
+.chart-wrap{
+  background: var(--card);
   border-radius: var(--radius);
-  padding: 80px 20px;
-  min-height: 360px;
-  text-align: center;
-  font-weight: 900;
-  color: rgba(255,255,255,0.55);
+  padding: 18px;
+  height: 560px;
+}
+#cumChart{
+  width:100% !important;
+  height:100% !important;
 }
 
-/* ===== responsive ========================================================= */
-/* 狭い画面：上下に落とさない。縮めるのは文字サイズとgap。 */
-@media (max-width: 760px){
-  .card{ min-height: 520px; padding: 28px 22px 24px; }
+/* ------------------------------
+   Small screens
+   - Keep "note-row" still under the number
+   - Keep left block left, right block right (within the middle column)
+   - Reduce font sizes so it fits
+------------------------------ */
+@media (max-width: 900px){
+  .card{ padding: 34px 26px; min-height: 520px; }
+
+  .fig-grid{
+    grid-template-columns: 1fr minmax(0, 520px) 1fr;
+    row-gap: 18px;
+  }
+
   .note{ font-size: 22px; }
   .subline{ font-size: 22px; gap: 28px; }
-  .tabs{ gap: 12px; }
-  .tab{ padding: 16px 18px; font-size: 16px; border-radius: 16px; }
 }
 
-@media (max-width: 520px){
-  .note{ font-size: 19px; }
-  .subline{ font-size: 20px; gap: 22px; }
-  .card{ min-height: 480px; }
+@media (max-width: 560px){
+  .tabs{ gap: 10px; }
+  .tab{ font-size: 18px; padding: 14px 18px; }
+
+  .fig-grid{
+    /* 端末が狭い時は左右の余白列を薄くして中央列を確保 */
+    grid-template-columns: 10px 1fr 10px;
+  }
+
+  .big-number{
+    margin-top: 28px;
+  }
+
+  .note-row{
+    /* 2列維持。上下に崩さない */
+    grid-template-columns: 1fr 1fr;
+    column-gap: 14px;
+  }
+
+  .note{
+    font-size: 18px;
+  }
+
+  .subline{
+    font-size: 18px;
+    gap: 18px;
+  }
 }
 
-/* さらに狭い：notes が“上下に落ちそう”なら、フォントをもっと下げて守る */
-@media (max-width: 420px){
-  .note{ font-size: 17px; }
-  .subline{ font-size: 18px; }
+/* ------------------------------
+   Placeholder (Tab3/Tab4)
+------------------------------ */
+.placeholder{
+  opacity:.7;
+  text-align:center;
+  font-size: 26px;
+  padding: 60px 0;
 }
