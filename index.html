@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>オタクカウント</title>
 
-  <link rel="stylesheet" href="./css/style.css?v=22" />
+  <link rel="stylesheet" href="./css/style.css?v=23" />
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -32,20 +32,23 @@
   <main class="content">
     <!-- Tab 1 -->
     <section id="t1" class="panel active" role="tabpanel">
-      <div class="big-number">
-        <span id="leftValue">–</span>
-        <span class="dash"> − </span>
-        <span id="rightValue">–</span>
-      </div>
+  <div class="big-number">
+    <span id="leftValue">–</span>
+    <span class="dash"> − </span>
+    <span id="rightValue">–</span>
+  </div>
 
-      <div class="subline">
-        <span id="aCount">A: –</span>
-        <span id="othersCount">(B..F): –</span>
-      </div>
-      <div class="desc">
-        <div>↑ Aさんが言った回数 − (B〜Fさんの合計)</div>
-      </div>
-    </section>
+  <div class="subline">
+    <span id="aCount">Cさん: –</span>
+    <span id="othersCount">Others: –</span>
+  </div>
+
+  <div class="desc">
+    <div>↑ 左：Cさんにオタクと言われた回数</div>
+    <div>↑ 右：他の人にオタクと言われた回数</div>
+  </div>
+</section>
+
 
     <!-- Tab 2 -->
     <section id="t2" class="panel" role="tabpanel">
@@ -77,9 +80,9 @@
     __mark('inline');
   </script>
 
-  <script src="js/config.js?v=22"></script>
-  <script src="js/api.js?v=22"></script>
-  <script src="js/main.js?v=22"></script>
+  <script src="js/config.js?v=23"></script>
+  <script src="js/api.js?v=23"></script>
+  <script src="js/main.js?v=23"></script>
 
   <script>
     document.body.insertAdjacentHTML(
