@@ -2,6 +2,8 @@
 (() => {
   'use strict';
 
+  if (window.__OTAKU_COUNT_STARTED__) return;
+  window.__OTAKU_COUNT_STARTED__ = true;
   // ---- helpers -------------------------------------------------------------
   const $ = (id) => document.getElementById(id);
 
@@ -245,7 +247,12 @@ const renderTab1 = (events, usersFromApi) => {
       const diffEl = $('diffValue');
       const leftEl = $('aCount');
       const rightEl = $('othersCount');
-      if (diffEl) diffEl.textContent = '–';
+      if (diffEl) {
+            diffEl.textContent = `${left} - ${right}`;
+            diffEl.style.color = '';          // 変なstyle上書き保険
+            diffEl.style.opacity = '1';
+          }
+
       if (leftEl) leftEl.textContent = `${PRIMARY}: –`;
       if (rightEl) rightEl.textContent = `Others: –`;
     }
