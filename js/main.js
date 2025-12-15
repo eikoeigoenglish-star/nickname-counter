@@ -2,9 +2,10 @@
 (() => {
   'use strict';
 
-  if (window.__OTAKU_COUNT_STARTED__) return;
-  window.__OTAKU_COUNT_STARTED__ = true;
-  // ---- helpers -------------------------------------------------------------
+  // 二重起動ガード
+  if (window.__OTAKU_MAIN_STARTED__) return;
+  window.__OTAKU_MAIN_STARTED__ = true;
+
   const $ = (id) => document.getElementById(id);
 
   const setMeta = (msg) => {
@@ -12,30 +13,10 @@
     if (el) el.textContent = msg;
   };
 
-  const fmtDate = (d) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${dd}`;
-  };
+  // 文字のブレ対策（全角スペースも潰す）
+  const norm = (s) => String(s ?? '').replace(/\u3000/g, ' ').trim();
 
-  const parseISODate = (s) => {
-    // "yyyy-mm-dd" をローカル日付として扱う
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
-    if (!m) return null;
-    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-    return isNaN(d.getTime()) ? null : d;
-  };
-
-  const daysSince = (baseDateStr, dateStr) => {
-    const base = parseISODate(baseDateStr);
-    const d = parseISODate(dateStr);
-    if (!base || !d) return null;
-    const ms = d.getTime() - base.getTime();
-    return Math.floor(ms / 86400000) + 1; // 1日目始まり
-  };
-
-  // JSONP loader (api.js が壊れても動く保険)
+  // JSONP（CORS回避、キャッシュ回避付き）
   const fetchJsonp = (url, timeoutMs = 12000) =>
     new Promise((resolve, reject) => {
       const cbName = `__cb_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -76,17 +57,7 @@
       document.head.appendChild(script);
     });
 
-  // ---- config --------------------------------------------------------------
-  const cfg = window.APP_CONFIG || {};
-  const API_URL = cfg.GAS_API_EXEC_URL;
-  const BASE_DATE = cfg.BASE_DATE || '2025-11-01';
-  const USERS = Array.isArray(cfg.USERS) ? cfg.USERS : [];
-
-  // 1タブ目の「左（Cさん）」は USERS[0] を採用
-  const PRIMARY = USERS[0] || 'Cさん';
-  const OTHERS = USERS.slice(1);
-
-  // ---- tab ui --------------------------------------------------------------
+  // タブ切替
   const initTabs = () => {
     const tabs = Array.from(document.querySelectorAll('.tab[data-tab]'));
     const panels = Array.from(document.querySelectorAll('.panel[id]'));
@@ -96,63 +67,103 @@
       panels.forEach((p) => p.classList.toggle('active', p.id === tabId));
     };
 
-    tabs.forEach((b) => {
-      b.addEventListener('click', () => activate(b.dataset.tab));
-    });
+    tabs.forEach((b) => b.addEventListener('click', () => activate(b.dataset.tab)));
   };
 
-// ---- rendering: tab1 -----------------------------------------------------
-const renderTab1 = (events, usersFromApi) => {
-  const diffEl  = document.getElementById('diffValue');
-  const leftEl  = document.getElementById('aCount');
-  const rightEl = document.getElementById('othersCount');
+  // 日付パース（yyyy-mm-dd）
+  const parseISODate = (s) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
+    if (!m) return null;
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return isNaN(d.getTime()) ? null : d;
+  };
 
-  // 文字のブレ（前後スペース/全角スペース等）を潰す
-  const norm = (s) => String(s ?? '').replace(/\u3000/g, ' ').trim();
+  const daysSince = (baseDateStr, dateStr) => {
+    const base = parseISODate(baseDateStr);
+    const d = parseISODate(dateStr);
+    if (!base || !d) return null;
+    const ms = d.getTime() - base.getTime();
+    return Math.floor(ms / 86400000) + 1; // 1日目始まり
+  };
 
-  // API優先、ダメならconfig USERSにフォールバック
-  const rawUsers = Array.isArray(usersFromApi) && usersFromApi.length ? usersFromApi : USERS;
-  const users = rawUsers.map(norm).filter(Boolean);
+  // 0→目的値へアニメ
+  const animate2 = (leftTo, rightTo, durationMs = 900) => {
+    const leftValueEl = $('leftValue');
+    const rightValueEl = $('rightValue');
+    const aCountEl = $('aCount');
+    const othersEl = $('othersCount');
 
-  const primary = users[0] || norm(PRIMARY) || 'Cさん';
-  const others = users.slice(1);
+    const L = Math.max(0, Number(leftTo) || 0);
+    const R = Math.max(0, Number(rightTo) || 0);
 
-  // 集計（usersに含まれる人だけ数える）
-  const allow = new Set(users);
-  let left = 0;
-  let right = 0;
+    const start = performance.now();
+    const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 
-  for (const e of (events || [])) {
-    const name = norm(e?.name);
-    if (!allow.has(name)) continue;
-    if (name === primary) left++;
-    else right++;
-  }
+    const render = (l, r) => {
+      if (leftValueEl) leftValueEl.textContent = String(l);
+      if (rightValueEl) rightValueEl.textContent = String(r);
+      if (aCountEl) aCountEl.textContent = `Cさん: ${l}`;
+      if (othersEl) othersEl.textContent = `Others: ${r}`;
+    };
 
-  if (diffEl)  diffEl.textContent  = `${left} - ${right}`;      // 見た目も「数字 - 数字」
-  if (leftEl)  leftEl.textContent  = `${primary}: ${left}`;
-  if (rightEl) rightEl.textContent = `Others: ${right}`;
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const k = easeOut(t);
+      const l = Math.round(L * k);
+      const r = Math.round(R * k);
+      render(l, r);
+      if (t < 1) requestAnimationFrame(step);
+      else render(L, R);
+    };
 
-  console.log('[tab1 ok]', { primary, left, right, users, sample: (events || []).slice(0, 5) });
-};
+    render(0, 0);
+    requestAnimationFrame(step);
+  };
 
-  // ---- rendering: tab2 chart ----------------------------------------------
+  // Tab1：Cさん vs Cさん以外合計（2値のみ）
+  const renderTab1 = (events, usersFromApi) => {
+    // users は API優先、なければ config の USERS
+    const cfgUsers = Array.isArray(window.APP_CONFIG?.USERS) ? window.APP_CONFIG.USERS : [];
+    const users = (Array.isArray(usersFromApi) && usersFromApi.length ? usersFromApi : cfgUsers)
+      .map(norm)
+      .filter(Boolean);
+
+    // 左は「Cさん」固定（要件）
+    const primary = 'Cさん';
+
+    const allow = new Set(users.length ? users : [primary]);
+    let cCount = 0;
+    let othersCount = 0;
+
+    for (const e of events || []) {
+      const name = norm(e?.name);
+      if (!name) continue;
+      if (allow.size && !allow.has(name)) continue; // usersで制限する場合
+      if (name === primary) cCount++;
+      else othersCount++;
+    }
+
+    animate2(cCount, othersCount, 900);
+  };
+
+  // Tab2：累積折れ線（config USERS を使う）
   let chart = null;
-
   const renderTab2 = (events) => {
+    const cfg = window.APP_CONFIG || {};
+    const BASE_DATE = cfg.BASE_DATE || '2026-01-01';
+    const USERS = Array.isArray(cfg.USERS) ? cfg.USERS.map(norm).filter(Boolean) : [];
+
     const canvas = $('cumChart');
     if (!canvas || typeof Chart === 'undefined') return;
 
-    // 日数軸を作る：BASE_DATE から events の最大日まで
     const dayNums = [];
-    const byUserDay = new Map(); // user -> Map(dayNum -> count that day)
-
+    const byUserDay = new Map();
     for (const u of USERS) byUserDay.set(u, new Map());
 
     let maxDay = 0;
     for (const e of events || []) {
-      const name = String(e.name || '');
-      const day = daysSince(BASE_DATE, e.date);
+      const name = norm(e?.name);
+      const day = daysSince(BASE_DATE, e?.date);
       if (!byUserDay.has(name) || day == null) continue;
 
       const m = byUserDay.get(name);
@@ -160,11 +171,9 @@ const renderTab1 = (events, usersFromApi) => {
       if (day > maxDay) maxDay = day;
     }
 
-    // maxDay が 0（データなし）でも最低 1 は描く
     const last = Math.max(1, maxDay);
     for (let d = 1; d <= last; d++) dayNums.push(d);
 
-    // 累積系列に変換
     const datasets = USERS.map((u) => {
       const m = byUserDay.get(u) || new Map();
       let cum = 0;
@@ -172,96 +181,58 @@ const renderTab1 = (events, usersFromApi) => {
         cum += (m.get(d) || 0);
         return cum;
       });
-      return {
-        label: u,
-        data,
-        fill: false,
-        tension: 0.15,
-        pointRadius: 2,
-      };
+      return { label: u, data, fill: false, tension: 0.15, pointRadius: 2 };
     });
 
-    // 既存チャート破棄
-    if (chart) {
-      chart.destroy();
-      chart = null;
-    }
+    if (chart) { chart.destroy(); chart = null; }
 
     chart = new Chart(canvas.getContext('2d'), {
       type: 'line',
-      data: {
-        labels: dayNums,
-        datasets,
-      },
+      data: { labels: dayNums, datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: { display: true },
-        },
-        scales: {
-          x: {
-            title: { display: false },
-          },
-          y: {
-            beginAtZero: true,
-          },
-        },
+        plugins: { legend: { display: true } },
+        scales: { y: { beginAtZero: true } },
       },
     });
   };
 
-  // ---- bootstrap -----------------------------------------------------------
+  // データ取得（api.js があれば優先）
   const loadData = async () => {
+    const cfg = window.APP_CONFIG || {};
+    const API_URL = cfg.GAS_API_EXEC_URL;
     if (!API_URL) throw new Error('GAS_API_EXEC_URL is missing');
 
-    // api.js が提供してる可能性がある関数を優先して使う
     if (window.API && typeof window.API.fetchPayload === 'function') {
       return await window.API.fetchPayload(API_URL);
     }
-    if (typeof window.fetchJsonp === 'function') {
-      return await window.fetchJsonp(API_URL);
-    }
-    // 最後の保険
     return await fetchJsonp(API_URL);
   };
 
   const main = async () => {
-    try {
-      initTabs();
+    initTabs();
 
-      const payload = await loadData();
-      if (!payload || payload.ok !== true) throw new Error('payload not ok');
+    const payload = await loadData();
+    if (!payload || payload.ok !== true) throw new Error('payload not ok');
 
-      const events = Array.isArray(payload.events) ? payload.events : [];
-      const updatedAt = payload.updatedAt ? String(payload.updatedAt) : '';
+    const events = Array.isArray(payload.events) ? payload.events : [];
+    const updatedAt = payload.updatedAt ? String(payload.updatedAt) : '';
 
-      // 取得結果を meta に出す（今出てる表示を維持）
-      setMeta(`取得OK: events=${events.length}${updatedAt ? ` / updatedAt=${updatedAt}` : ''}`);
+    setMeta(`取得OK: events=${events.length}${updatedAt ? ` / updatedAt=${updatedAt}` : ''}`);
 
-      renderTab1(events, payload.users);
-      renderTab2(events);
-    } catch (e) {
-      setMeta(`初期化エラー: ${e && e.message ? e.message : String(e)}`);
-      // 失敗時は 1タブ目をハイフンに戻す（UI崩れ防止）
-      const diffEl = $('diffValue');
-      const leftEl = $('aCount');
-      const rightEl = $('othersCount');
-      if (diffEl) {
-            diffEl.textContent = `${left} - ${right}`;
-            diffEl.style.color = '';          // 変なstyle上書き保険
-            diffEl.style.opacity = '1';
-          }
+    // ①：C vs Others
+    renderTab1(events, payload.users);
 
-      if (leftEl) leftEl.textContent = `${PRIMARY}: –`;
-      if (rightEl) rightEl.textContent = `Others: –`;
-    }
+    // ②：累積推移
+    renderTab2(events);
   };
 
-  // DOM 構築後に実行
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', main);
+    document.addEventListener('DOMContentLoaded', () => {
+      main().catch((e) => setMeta(`初期化エラー: ${e?.message || String(e)}`));
+    });
   } else {
-    main();
+    main().catch((e) => setMeta(`初期化エラー: ${e?.message || String(e)}`));
   }
 })();
