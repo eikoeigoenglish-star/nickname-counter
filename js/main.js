@@ -106,7 +106,7 @@ async function main() {
   const baseDateISO = cfg.BASE_DATE;
   const users = cfg.USERS;
 
-  const data = await fetchJsonp(apiUrl);
+  const data = await fetchJson(apiUrl);
   if (!data || !data.ok) {
     document.getElementById("meta").textContent = "データ取得エラー";
     return;
