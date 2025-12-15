@@ -1,34 +1,45 @@
 window.__mark && window.__mark('api.js');
-function fetchJsonp(url, timeoutMs = 10000) {
+window.__mark && window.__mark('api.js');
+
+function buildUrlWithParams(baseUrl, params) {
+  const u = new URL(baseUrl);
+  Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, String(v)));
+  return u.toString();
+}
+
+function fetchJsonp(baseUrl, timeoutMs = 10000) {
   return new Promise((resolve, reject) => {
-    const cbName = "__jsonp_cb_" + Math.random().toString(36).slice(2);
-    const script = document.createElement("script");
-
-    const timer = setTimeout(() => {
+    const cbName = '__jsonp_cb_' + Math.random().toString(36).slice(2);
+    const done = (err, data) => {
       cleanup();
-      reject(new Error("JSONP timeout: " + script.src));
-    }, timeoutMs);
+      if (err) reject(err);
+      else resolve(data);
+    };
 
-    function cleanup() {
+    const cleanup = () => {
       clearTimeout(timer);
       try { delete window[cbName]; } catch (_) {}
-      script.remove();
-    }
-
-    window[cbName] = (data) => {
-      cleanup();
-      resolve(data);
+      if (script && script.parentNode) script.parentNode.removeChild(script);
     };
 
-    const sep = url.includes("?") ? "&" : "?";
-    script.src = `${url}${sep}callback=${cbName}`;
+    window[cbName] = (data) => done(null, data);
+
+    // ★ キャッシュ回避：t=現在時刻 を必ず付ける
+    const url = buildUrlWithParams(baseUrl, {
+      callback: cbName,
+      t: Date.now()
+    });
+
+    let script = document.createElement('script');
+    script.src = url;
     script.async = true;
+    script.onerror = () => done(new Error('JSONP load error: ' + url));
 
-    script.onerror = () => {
-      cleanup();
-      reject(new Error("JSONP load error: " + script.src));
-    };
+    const timer = setTimeout(() => {
+      done(new Error('JSONP timeout: ' + url));
+    }, timeoutMs);
 
     document.head.appendChild(script);
   });
 }
+
