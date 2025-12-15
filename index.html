@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>⭐DHT⭐カウンター</title>
 
-  <link rel="stylesheet" href="./css/style.css?v=32" />
+  <link rel="stylesheet" href="./css/style.css?v=33" />
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -33,34 +33,39 @@
   <main class="content">
     <!-- Tab 1 -->
     <section id="t1" class="panel active" role="tabpanel">
-  <div class="card">
-    <div class="fig-grid">
-      <!-- 1) big number -->
-      <div class="big-number">
-  <span id="leftValue">–</span>
-  <span class="dash"> − </span>
-  <span id="rightValue">–</span>
-</div>
+  <div class="card fig-grid">
 
-<div class="note-row">
-  <div class="note note-left">
-    <div>↑ Cさんに</div>
-    <div>⭐DHT⭐と</div>
-    <div>言われた回数</div>
-  </div>
-
-  <div class="note note-right">
-    <div>↑ 他の人に</div>
-    <div>⭐DHT⭐と</div>
-    <div>言われた回数</div>
-  </div>
-</div>
-      
+    <!-- 数字 -->
+    <div class="big-number">
+      <span id="leftValue">–</span>
+      <span class="dash"> − </span>
+      <span id="rightValue">–</span>
     </div>
+
+    <!-- 数字の直下：左右の文言（3行固定） -->
+    <div class="note-row">
+      <div class="note note-left">
+        <div>↑ Cさんに</div>
+        <div>⭐DHT⭐と</div>
+        <div>言われた回数</div>
+      </div>
+
+      <div class="note note-right">
+        <div>↑ 他の人に</div>
+        <div>⭐DHT⭐と</div>
+        <div>言われた回数</div>
+      </div>
+    </div>
+
+    <!-- 下段：小さい数 -->
+    <div class="subline">
+      <span id="aCount">Cさん: –</span>
+      <span id="othersCount">Others: –</span>
+    </div>
+
   </div>
 </section>
-
-
+    
     <!-- Tab 2 -->
     <section id="t2" class="panel" role="tabpanel">
       <div class="card">
@@ -94,9 +99,9 @@
     __mark('inline');
   </script>
 
-  <script src="js/config.js?v=32"></script>
-  <script src="js/api.js?v=32"></script>
-  <script src="js/main.js?v=32"></script>
+  <script src="js/config.js?v=33"></script>
+  <script src="js/api.js?v=33"></script>
+  <script src="js/main.js?v=33"></script>
 
   <script>
     document.body.insertAdjacentHTML(
