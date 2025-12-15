@@ -13,7 +13,7 @@
   };
 
   // ---------------------------
-  // JSONP fetch (fallback込み)
+  // JSONP fetch
   // ---------------------------
   function fetchJsonp(url, { timeoutMs = 12000, callbackParam = 'callback' } = {}) {
     return new Promise((resolve, reject) => {
@@ -38,8 +38,7 @@
 
       const u = new URL(url);
       u.searchParams.set(callbackParam, cbName);
-      // キャッシュ回避
-      u.searchParams.set('_', String(Date.now()));
+      u.searchParams.set('_', String(Date.now())); // cache bust
 
       script.src = u.toString();
       script.async = true;
@@ -61,8 +60,6 @@
       throw new Error('GAS_API_EXEC_URL is missing/invalid');
     }
 
-    // もし api.js 側に fetchPayload 的な関数があるならそれを優先してもよいが、
-    // “壊れてても動く”を優先してここでは JSONP を直に叩く
     const payload = await fetchJsonp(apiUrl, { timeoutMs: 12000, callbackParam: 'callback' });
 
     if (!payload || payload.ok !== true || !Array.isArray(payload.events)) {
@@ -72,10 +69,9 @@
   }
 
   // ---------------------------
-  // 集計ユーティリティ
+  // Utils
   // ---------------------------
   function parseYmd(ymd) {
-    // ymd: "YYYY-MM-DD"
     if (!ymd || typeof ymd !== 'string') return null;
     const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!m) return null;
@@ -84,14 +80,12 @@
   }
 
   function dayIndexFromBase(baseDate, targetDate) {
-    // baseDate/targetDate: Date, 1日目=1
     const ms = targetDate.getTime() - baseDate.getTime();
     const days = Math.floor(ms / 86400000);
-    return days + 1;
+    return days + 1; // 1日目 = 1
   }
 
   function buildCounts(events, users) {
-    // users[0] = 左（Cさん想定）、users[1..] = Others
     const leftName = users[0];
     const otherSet = new Set(users.slice(1));
     let left = 0;
@@ -107,7 +101,7 @@
   }
 
   // ---------------------------
-  // タブ
+  // Tabs
   // ---------------------------
   function setupTabs() {
     const tabs = Array.from(document.querySelectorAll('.tab[data-tab]'));
@@ -123,38 +117,39 @@
   }
 
   // ---------------------------
-  // ① 数字表示（count-up）
+  // ① Numbers (robust DOM write)
   // ---------------------------
   function animateCounts({ left, others, leftLabel, othersLabel, durationMs = 900 }) {
-    const diffEl = $('#diffValue');
+    // まず「書き込み先」を柔軟に探す
+    const diffEl = $('#diffValue');          // あればここに
+    const bigNumber = $('.big-number');      // 無ければ big-number 自体に
     const aCountEl = $('#aCount');
     const othersCountEl = $('#othersCount');
 
-    if (!diffEl || !aCountEl || !othersCountEl) return;
-
-    const start = performance.now();
-    const fromL = 0;
-    const fromR = 0;
     const toL = Math.max(0, Number(left) || 0);
     const toR = Math.max(0, Number(others) || 0);
 
-    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
-
     const render = (l, r) => {
-      diffEl.textContent = `${l} - ${r}`;
-      aCountEl.textContent = `${leftLabel}: ${l}`;
-      othersCountEl.textContent = `${othersLabel}: ${r}`;
+      const text = `${l} - ${r}`;
+      if (diffEl) diffEl.textContent = text;
+      else if (bigNumber) bigNumber.textContent = text;
+
+      if (aCountEl) aCountEl.textContent = `${leftLabel}: ${l}`;
+      if (othersCountEl) othersCountEl.textContent = `${othersLabel}: ${r}`;
     };
+
+    // 最低でも一回は描画（DOMが多少違っても出す）
+    render(0, 0);
+
+    const start = performance.now();
+    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
     const step = (now) => {
       const t = Math.min(1, (now - start) / durationMs);
       const k = easeOutCubic(t);
-
-      const l = Math.round(fromL + (toL - fromL) * k);
-      const r = Math.round(fromR + (toR - fromR) * k);
-
+      const l = Math.round(toL * k);
+      const r = Math.round(toR * k);
       render(l, r);
-
       if (t < 1) requestAnimationFrame(step);
       else render(toL, toR);
     };
@@ -163,7 +158,7 @@
   }
 
   // ---------------------------
-  // ② 累積グラフ（Chart.js）
+  // ② Chart
   // ---------------------------
   let chartInstance = null;
 
@@ -173,20 +168,17 @@
 
     const base = parseYmd(baseDateStr || '2026-01-01') || new Date(2026, 0, 1);
 
-    // day -> user -> count
     const daySet = new Set();
-    const perUserPerDay = new Map(); // user => Map(day => count)
-
+    const perUserPerDay = new Map();
     for (const u of users) perUserPerDay.set(u, new Map());
 
     for (const ev of events) {
       const name = ev && ev.name;
       const d = parseYmd(ev && ev.date);
       if (!name || !d) continue;
-      if (!perUserPerDay.has(name)) continue; // users外は無視
+      if (!perUserPerDay.has(name)) continue;
 
       const idx = dayIndexFromBase(base, d);
-      // 1日目より前は無視（必要なら 0 も扱えるが、仕様上は 1 起点でOK）
       if (idx < 1) continue;
 
       daySet.add(idx);
@@ -195,7 +187,6 @@
     }
 
     const labels = Array.from(daySet).sort((a, b) => a - b);
-    // データが少なすぎるとグラフが寂しいので、最低1点は持つ
     if (labels.length === 0) labels.push(1);
 
     const datasets = users.map((u) => {
@@ -205,16 +196,9 @@
         cum += (m.get(day) || 0);
         return cum;
       });
-
-      return {
-        label: u,
-        data,
-        tension: 0.25,
-        pointRadius: 2,
-      };
+      return { label: u, data, tension: 0.25, pointRadius: 2 };
     });
 
-    // 既存破棄
     if (chartInstance) {
       try { chartInstance.destroy(); } catch (_) {}
       chartInstance = null;
@@ -227,24 +211,16 @@
         responsive: true,
         maintainAspectRatio: false,
         animation: false,
-        plugins: {
-          legend: { display: true },
-        },
+        plugins: { legend: { display: true } },
         scales: {
-          x: {
-            title: { display: false },
-          },
-          y: {
-            beginAtZero: true,
-            ticks: { precision: 0 },
-          },
+          y: { beginAtZero: true, ticks: { precision: 0 } },
         },
       },
     });
   }
 
   // ---------------------------
-  // 起動
+  // Boot
   // ---------------------------
   async function boot() {
     mark('main.js');
@@ -255,19 +231,21 @@
       ? cfg.USERS
       : ['Cさん', 'Sさん', 'Hさん', 'Yさん', 'Aさん', 'Dさん'];
 
-    // ①タブの見出し（A/B..F のままでも機能は動くが、表示だけは C/Others に寄せる）
-    // ※HTMLの文言は触らず、サブラインのラベルだけ制御する
-    const leftLabel = users[0];
-    const othersLabel = 'Others';
-
     setMeta('読み込み中…');
 
     const payload = await loadPayload();
     setMeta(`取得OK: events=${payload.events.length} / updatedAt=${payload.updatedAt || '-'}`);
 
-    // ①
     const { left, others } = buildCounts(payload.events, users);
-    animateCounts({ left, others, leftLabel, othersLabel, durationMs: 900 });
+
+    // ①：左=users[0]（Cさん） 右=users[1..]（S/H/Y/A/D）
+    animateCounts({
+      left,
+      others,
+      leftLabel: users[0],
+      othersLabel: 'Others',
+      durationMs: 900,
+    });
 
     // ②
     renderCumulativeChart(payload.events, users, cfg.BASE_DATE || '2026-01-01');
@@ -278,13 +256,11 @@
     boot().catch((err) => {
       console.error(err);
       setMeta(`初期化エラー: ${err && err.message ? err.message : String(err)}`);
-      // ①をダッシュ表示に戻す
+      // 画面も保険で落とす
       const diffEl = $('#diffValue');
-      const aCountEl = $('#aCount');
-      const othersCountEl = $('#othersCount');
+      const bigNumber = $('.big-number');
       if (diffEl) diffEl.textContent = '— — —';
-      if (aCountEl) aCountEl.textContent = 'A: –';
-      if (othersCountEl) othersCountEl.textContent = '(B..F): –';
+      else if (bigNumber) bigNumber.textContent = '— — —';
     });
   });
 })();
