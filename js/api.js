@@ -1,3 +1,4 @@
+window.__mark && window.__mark('api.js');
 function fetchJsonp(url, timeoutMs = 10000) {
   return new Promise((resolve, reject) => {
     const cbName = "__jsonp_cb_" + Math.random().toString(36).slice(2);
