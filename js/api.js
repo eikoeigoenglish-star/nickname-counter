@@ -1,31 +1,12 @@
-function fetchJsonp(url, timeoutMs = 10000) {
-  return new Promise((resolve, reject) => {
-    const cbName = "__jsonp_cb_" + Math.random().toString(36).slice(2);
-    const script = document.createElement("script");
+async function fetchJson(url, timeoutMs = 10000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
 
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error("JSONP timeout"));
-    }, timeoutMs);
-
-    function cleanup() {
-      clearTimeout(timer);
-      delete window[cbName];
-      script.remove();
-    }
-
-    window[cbName] = (data) => {
-      cleanup();
-      resolve(data);
-    };
-
-    const sep = url.includes("?") ? "&" : "?";
-    script.src = `${url}${sep}callback=${cbName}`;
-    script.onerror = () => {
-      cleanup();
-      reject(new Error("JSONP load error"));
-    };
-
-    document.head.appendChild(script);
-  });
+  try {
+    const res = await fetch(url, { cache: "no-store", signal: ctrl.signal });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
