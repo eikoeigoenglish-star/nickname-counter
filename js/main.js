@@ -101,37 +101,37 @@
 
 // ---- rendering: tab1 -----------------------------------------------------
 const renderTab1 = (events, usersFromApi) => {
-  try {
-    const diffEl = document.getElementById('diffValue');
-    const leftEl = document.getElementById('aCount');
-    const rightEl = document.getElementById('othersCount');
+  const diffEl  = document.getElementById('diffValue');
+  const leftEl  = document.getElementById('aCount');
+  const rightEl = document.getElementById('othersCount');
 
-    const users = Array.isArray(usersFromApi) ? usersFromApi : [];
-    const primary = users[0] || 'Cさん';
-    const others = users.slice(1);
+  // 文字のブレ（前後スペース/全角スペース等）を潰す
+  const norm = (s) => String(s ?? '').replace(/\u3000/g, ' ').trim();
 
-    const counts = new Map();
-    for (const u of users) counts.set(String(u), 0);
+  // API優先、ダメならconfig USERSにフォールバック
+  const rawUsers = Array.isArray(usersFromApi) && usersFromApi.length ? usersFromApi : USERS;
+  const users = rawUsers.map(norm).filter(Boolean);
 
-    for (const e of (events || [])) {
-      const name = String(e?.name ?? '');
-      if (!counts.has(name)) continue;
-      counts.set(name, (counts.get(name) || 0) + 1);
-    }
+  const primary = users[0] || norm(PRIMARY) || 'Cさん';
+  const others = users.slice(1);
 
-    const left = counts.get(String(primary)) || 0;
-    let right = 0;
-    for (const u of others) right += counts.get(String(u)) || 0;
+  // 集計（usersに含まれる人だけ数える）
+  const allow = new Set(users);
+  let left = 0;
+  let right = 0;
 
-    // ここは必ず更新
-    if (diffEl) diffEl.textContent = `${left}-${right}`;
-    if (leftEl) leftEl.textContent = `${primary}: ${left}`;
-    if (rightEl) rightEl.textContent = `Others: ${right}`;
-
-    console.log('[tab1 ok]', { primary, left, right, users });
-  } catch (err) {
-    console.error('[tab1 error]', err);
+  for (const e of (events || [])) {
+    const name = norm(e?.name);
+    if (!allow.has(name)) continue;
+    if (name === primary) left++;
+    else right++;
   }
+
+  if (diffEl)  diffEl.textContent  = `${left} - ${right}`;      // 見た目も「数字 - 数字」
+  if (leftEl)  leftEl.textContent  = `${primary}: ${left}`;
+  if (rightEl) rightEl.textContent = `Others: ${right}`;
+
+  console.log('[tab1 ok]', { primary, left, right, users, sample: (events || []).slice(0, 5) });
 };
 
   // ---- rendering: tab2 chart ----------------------------------------------
