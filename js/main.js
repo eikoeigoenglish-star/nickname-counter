@@ -219,7 +219,8 @@
     const events = Array.isArray(payload.events) ? payload.events : [];
     const updatedAt = payload.updatedAt ? String(payload.updatedAt) : '';
 
-    setMeta(`取得OK: events=${events.length}${updatedAt ? ` / updatedAt=${updatedAt}` : ''}`);
+    // 取得結果を meta に出す（今出てる表示を維持）
+    // setMeta(`取得OK: events=${events.length}${updatedAt ? ` / updatedAt=${updatedAt}` : ''}`);
 
     // ①：C vs Others
     renderTab1(events, payload.users);
