@@ -94,3 +94,39 @@ body{
 canvas{
   max-width:100%;
 }
+
+.big-number-caption-row{
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between; /* 左端/右端に固定 */
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.caption{
+  width: 40%;
+  font-size: 14px;
+  color: rgba(255,255,255,0.75);
+  letter-spacing: 0.03em;
+  line-height: 1.25;
+  white-space: nowrap; /* 3行以外で勝手に折り返さない */
+}
+
+.caption-left{ text-align: left; }
+.caption-right{ text-align: right; }
+
+.cap-line{ display:block; }
+
+/* 画面が狭い時は左右詰まり防止：上下に並べる */
+@media (max-width: 520px){
+  .big-number-caption-row{
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .caption{
+    width: 100%;
+    white-space: normal;
+  }
+  .caption-right{ text-align: left; }
+}
+
