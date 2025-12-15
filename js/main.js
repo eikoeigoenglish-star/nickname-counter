@@ -1,159 +1,282 @@
-window.__mark && window.__mark("main.js");
+// js/main.js
+(() => {
+  'use strict';
 
-let chartInstance = null;
+  // ----------------------------
+  // Utils
+  // ----------------------------
+  const $ = (sel, root = document) => root.querySelector(sel);
 
-function $(id) { return document.getElementById(id); }
-
-function setMeta(msg) {
-  const el = $("meta");
-  if (el) el.textContent = msg;
-}
-
-function activateTab(tabId) {
-  document.querySelectorAll(".tab").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.tab === tabId);
-  });
-  document.querySelectorAll(".panel").forEach(p => {
-    p.classList.toggle("active", p.id === tabId);
-  });
-}
-
-function buildCounts(events, users) {
-  const counts = Object.fromEntries(users.map(u => [u, 0]));
-  for (const e of events) {
-    if (!e || !e.name) continue;
-    if (counts[e.name] != null) counts[e.name] += 1;
-  }
-  return counts;
-}
-
-function parseISODateToUTC(iso) {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d));
-}
-
-function dayIndexSince(baseISO, iso) {
-  const base = parseISODateToUTC(baseISO);
-  const dt = parseISODateToUTC(iso);
-  const diffDays = Math.floor((dt - base) / 86400000);
-  return diffDays + 1;
-}
-
-/**
- * Tab1: 「Cさんの合計 −（S/H/Y/A/D の合計）」を大きく "X − Y" で表示
- * ※HTML側は id="diffValue" をそのまま使い、そこに "X − Y" を入れる方式
- */
-function renderTab1(counts) {
-  const leftName = "Cさん";
-  const rightNames = ["Sさん", "Hさん", "Yさん", "Aさん", "Dさん"];
-
-  const left = counts[leftName] || 0;
-  const right = rightNames.reduce((sum, n) => sum + (counts[n] || 0), 0);
-
-  // 大きい表示は "X − Y"
-  const diffEl = $("diffValue");
-  if (diffEl) diffEl.textContent = `${left.toLocaleString("ja-JP")} − ${right.toLocaleString("ja-JP")}`;
-
-  // 小さい補助表示（既存DOMを流用）
-  const aCountEl = $("aCount");
-  const othersEl = $("othersCount");
-  if (aCountEl) aCountEl.textContent = `${leftName}: ${left.toLocaleString("ja-JP")}`;
-  if (othersEl) othersEl.textContent = `Others: ${right.toLocaleString("ja-JP")}`;
-}
-
-function renderTab2(events, users, baseDateISO) {
-  if (!window.Chart) {
-    throw new Error("Chart.js が読み込めていません");
+  function normName(s) {
+    return String(s ?? '').trim();
   }
 
-  const daily = new Map();
-  let maxDay = 0;
-
-  for (const e of events) {
-    if (!e?.date || !e?.name) continue;
-    const di = dayIndexSince(baseDateISO, e.date);
-    if (di < 1) continue; // BASE_DATEより前は捨てる
-    maxDay = Math.max(maxDay, di);
-
-    if (!daily.has(di)) daily.set(di, {});
-    const obj = daily.get(di);
-    obj[e.name] = (obj[e.name] || 0) + 1;
+  function parseDateYMD(s) {
+    // "2025-11-21" / "2025/11/21" などを許容
+    const str = String(s ?? '').trim();
+    if (!str) return null;
+    const m = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    if (!m) return null;
+    const y = Number(m[1]);
+    const mo = Number(m[2]) - 1;
+    const d = Number(m[3]);
+    const dt = new Date(Date.UTC(y, mo, d));
+    if (Number.isNaN(dt.getTime())) return null;
+    return dt;
   }
 
-  if (maxDay === 0) maxDay = 1;
+  function daysDiffUTC(a, b) {
+    // a,b: Date (UTC midnight想定)
+    const ms = b.getTime() - a.getTime();
+    return Math.floor(ms / 86400000);
+  }
 
-  const labels = Array.from({ length: maxDay }, (_, i) => i + 1);
+  function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
 
-  const datasets = users.map((u) => {
-    let cum = 0;
-    const data = labels.map((day) => {
-      const obj = daily.get(day);
-      const add = obj && obj[u] ? obj[u] : 0;
-      cum += add;
-      return cum;
+  function animateNumber(el, to, ms = 900) {
+    if (!el) return;
+    const from = 0;
+    const start = performance.now();
+    const target = Number.isFinite(to) ? to : 0;
+
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / ms);
+      const v = Math.round(from + (target - from) * t);
+      el.textContent = String(v);
+      if (t < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  function animatePair(el, left, right, ms = 900) {
+    // 例: "54 - 50"
+    if (!el) return;
+    const L = Number.isFinite(left) ? left : 0;
+    const R = Number.isFinite(right) ? right : 0;
+    const start = performance.now();
+
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / ms);
+      const lv = Math.round(L * t);
+      const rv = Math.round(R * t);
+      el.textContent = `${lv} - ${rv}`;
+      if (t < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  // ----------------------------
+  // JSONP (CORS回避)
+  // ----------------------------
+  function fetchJsonp(url, { timeoutMs = 12000, callbackParam = 'callback' } = {}) {
+    return new Promise((resolve, reject) => {
+      const cbName = '__jsonp_cb_' + Math.random().toString(36).slice(2);
+      const sep = url.includes('?') ? '&' : '?';
+      const fullUrl = `${url}${sep}${callbackParam}=${encodeURIComponent(cbName)}&_ts=${Date.now()}`;
+
+      let timer = null;
+      const script = document.createElement('script');
+
+      window[cbName] = (data) => {
+        cleanup();
+        resolve(data);
+      };
+
+      function cleanup() {
+        if (timer) clearTimeout(timer);
+        try { delete window[cbName]; } catch (_) { window[cbName] = undefined; }
+        if (script && script.parentNode) script.parentNode.removeChild(script);
+      }
+
+      timer = setTimeout(() => {
+        cleanup();
+        reject(new Error('JSONP timeout'));
+      }, timeoutMs);
+
+      script.onerror = () => {
+        cleanup();
+        reject(new Error('JSONP load error'));
+      };
+
+      script.src = fullUrl;
+      document.head.appendChild(script);
     });
-    return { label: u, data, tension: 0.2 };
-  });
+  }
 
-  const canvas = $("cumChart");
-  const ctx = canvas.getContext("2d");
+  // ----------------------------
+  // Tabs
+  // ----------------------------
+  function initTabs() {
+    const tabs = Array.from(document.querySelectorAll('.tab[data-tab]'));
+    const panels = Array.from(document.querySelectorAll('.panel[id]'));
 
-  if (chartInstance) chartInstance.destroy();
+    const activate = (tabId) => {
+      tabs.forEach((b) => b.classList.toggle('active', b.dataset.tab === tabId));
+      panels.forEach((p) => p.classList.toggle('active', p.id === tabId));
+    };
 
-  chartInstance = new Chart(ctx, {
-    type: "line",
-    data: { labels, datasets },
-    options: {
-      responsive: true,
-      plugins: { legend: { position: "bottom" } },
-      scales: { y: { beginAtZero: true } }
+    tabs.forEach((b) => {
+      b.addEventListener('click', () => activate(b.dataset.tab));
+    });
+  }
+
+  // ----------------------------
+  // Data shaping
+  // ----------------------------
+  function shapeEvents(payload) {
+    const eventsRaw = Array.isArray(payload?.events) ? payload.events : [];
+    const events = eventsRaw
+      .map((e) => ({
+        name: normName(e?.name),
+        date: parseDateYMD(e?.date),
+        url: String(e?.url ?? ''),
+      }))
+      .filter((e) => e.name && e.date); // name/date必須（urlは任意）
+
+    return {
+      ok: !!payload?.ok,
+      updatedAt: String(payload?.updatedAt ?? ''),
+      usersFromApi: Array.isArray(payload?.users) ? payload.users.map(normName).filter(Boolean) : [],
+      events,
+    };
+  }
+
+  function countByName(events) {
+    const m = new Map();
+    for (const e of events) m.set(e.name, (m.get(e.name) ?? 0) + 1);
+    return m;
+  }
+
+  // ----------------------------
+  // Chart
+  // ----------------------------
+  let chart = null;
+
+  function renderCumChart({ events, users, baseDateStr }) {
+    const canvas = document.getElementById('cumChart');
+    if (!canvas || !window.Chart) return;
+
+    const baseDate = parseDateYMD(baseDateStr) ?? parseDateYMD('2026-01-01');
+    // baseDate以降だけ採用（それ以前は無視）
+    const filtered = events.filter((e) => daysDiffUTC(baseDate, e.date) >= 0);
+
+    // maxDay = 1..N（baseDateを1日目）
+    let maxDay = 1;
+    for (const e of filtered) {
+      const day = daysDiffUTC(baseDate, e.date) + 1;
+      if (day > maxDay) maxDay = day;
     }
-  });
-}
 
-async function main() {
-  // タブ
-  document.querySelectorAll(".tab").forEach(btn => {
-    btn.addEventListener("click", () => activateTab(btn.dataset.tab));
-  });
+    const labels = Array.from({ length: maxDay }, (_, i) => String(i + 1));
 
-  // config
-  if (!window.APP_CONFIG) {
-    throw new Error("APP_CONFIG が未定義（config.js 読めてない）");
+    // 1日ごとの増分 → 累積へ
+    const perUserDaily = new Map();
+    users.forEach((u) => perUserDaily.set(u, new Array(maxDay).fill(0)));
+
+    for (const e of filtered) {
+      if (!perUserDaily.has(e.name)) continue;
+      const dayIdx = daysDiffUTC(baseDate, e.date); // 0-based
+      if (dayIdx >= 0 && dayIdx < maxDay) {
+        perUserDaily.get(e.name)[dayIdx] += 1;
+      }
+    }
+
+    const datasets = users.map((u) => {
+      const daily = perUserDaily.get(u) ?? new Array(maxDay).fill(0);
+      let cum = 0;
+      const data = daily.map((v) => (cum += v));
+      return {
+        label: u,
+        data,
+        tension: 0.25,
+        pointRadius: 2,
+      };
+    });
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { mode: 'index', intersect: false },
+        },
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: { title: { display: false } },
+          y: { beginAtZero: true },
+        },
+      },
+    });
   }
-  const cfg = window.APP_CONFIG;
 
-  if (!cfg.GAS_API_EXEC_URL) throw new Error("GAS_API_EXEC_URL が空です（config.js設定）");
-  if (!Array.isArray(cfg.USERS)) throw new Error("USERS が配列ではありません（config.js設定）");
-  if (!cfg.BASE_DATE) throw new Error("BASE_DATE が空です（config.js設定）");
+  // ----------------------------
+  // Boot
+  // ----------------------------
+  async function main() {
+    initTabs();
 
-  setMeta("データ取得中…");
+    const cfg = window.APP_CONFIG || {};
+    const apiUrl = String(cfg.GAS_API_EXEC_URL || '').trim();
+    const users = Array.isArray(cfg.USERS) && cfg.USERS.length
+      ? cfg.USERS.map(normName).filter(Boolean)
+      : [];
 
-  // JSONPで取得
-  const data = await fetchJsonp(cfg.GAS_API_EXEC_URL);
+    // 要件: タブ1は「Cさん - その他」
+    const primary = users[0] || 'Cさん';
+    const others = users.length ? users.slice(1) : [];
 
-  const events = Array.isArray(data?.events) ? data.events : [];
-  const updatedAt = data?.updatedAt ? ` / updatedAt=${data.updatedAt}` : "";
-  setMeta(`取得OK: events=${events.length}${updatedAt}`);
+    // 横軸: 2026-01-01 を 1日目
+    const baseDateStr = '2026-01-01';
 
-  if (!data?.ok) {
-    throw new Error("API returned not-ok: " + JSON.stringify(data));
+    if (!apiUrl) {
+      setText('meta', '初期化エラー: GAS_API_EXEC_URL が未設定');
+      return;
+    }
+
+    let shaped;
+    try {
+      const payload = await fetchJsonp(apiUrl, { callbackParam: 'callback' });
+      shaped = shapeEvents(payload);
+      setText('meta', `取得OK: events=${shaped.events.length} / updatedAt=${shaped.updatedAt || '-'}`);
+    } catch (e) {
+      console.error(e);
+      setText('meta', `初期化エラー: ${e?.message || e}`);
+      return;
+    }
+
+    // ---- Tab1: C合計 - その他合計
+    const byName = countByName(shaped.events);
+    const left = byName.get(primary) ?? 0;
+    const right = others.reduce((sum, n) => sum + (byName.get(n) ?? 0), 0);
+
+    const diffEl = document.getElementById('diffValue');
+    animatePair(diffEl, left, right, 900);
+
+    // サブ表示（要件に合わせて "Cさん:2 Others:0"）
+    setText('aCount', `${primary}: ${left}`);
+    setText('othersCount', `Others: ${right}`);
+
+    // ---- Tab2: 累積推移（usersの順で6本）
+    // configのusersを優先。なければAPIのusers、それもなければeventsから抽出
+    const chartUsers = users.length
+      ? users
+      : (shaped.usersFromApi.length ? shaped.usersFromApi : Array.from(new Set(shaped.events.map(e => e.name))));
+
+    renderCumChart({ events: shaped.events, users: chartUsers, baseDateStr });
   }
 
-  // Tab1
-  const counts = buildCounts(events, cfg.USERS);
-  renderTab1(counts);
-
-  // Tab2（失敗してもTab1は出す）
-  try {
-    renderTab2(events, cfg.USERS, cfg.BASE_DATE);
-  } catch (e) {
-    console.error(e);
-    setMeta(`取得OK（グラフ失敗）: ${e?.message || e}`);
+  // DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', main);
+  } else {
+    main();
   }
-}
-
-main().catch(err => {
-  console.error(err);
-  setMeta("初期化エラー: " + (err?.stack || err?.message || String(err)));
-});
+})();
