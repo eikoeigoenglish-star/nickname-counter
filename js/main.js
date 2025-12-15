@@ -99,40 +99,40 @@
     });
   };
 
-  // ---- rendering: tab1 -----------------------------------------------------
-  // ---- rendering: tab1 -----------------------------------------------------
-const renderTab1 = (events) => {
-  const diffEl = document.getElementById('diffValue');
-  const leftEl = document.getElementById('aCount');
-  const rightEl = document.getElementById('othersCount');
+// ---- rendering: tab1 -----------------------------------------------------
+const renderTab1 = (events, usersFromApi) => {
+  try {
+    const diffEl = document.getElementById('diffValue');
+    const leftEl = document.getElementById('aCount');
+    const rightEl = document.getElementById('othersCount');
 
-  // 3つ揃ってなくても、取れた要素は更新する（←ここが重要）
-  const users = Array.isArray(USERS) ? USERS : [];
-  const primary = users[0] || 'Cさん';
-  const others = users.slice(1);
+    const users = Array.isArray(usersFromApi) ? usersFromApi : [];
+    const primary = users[0] || 'Cさん';
+    const others = users.slice(1);
 
-  const counts = new Map();
-  for (const u of users) counts.set(String(u), 0);
+    const counts = new Map();
+    for (const u of users) counts.set(String(u), 0);
 
-  for (const e of events || []) {
-    const name = String(e?.name ?? '');
-    if (!counts.has(name)) continue;
-    counts.set(name, (counts.get(name) || 0) + 1);
+    for (const e of (events || [])) {
+      const name = String(e?.name ?? '');
+      if (!counts.has(name)) continue;
+      counts.set(name, (counts.get(name) || 0) + 1);
+    }
+
+    const left = counts.get(String(primary)) || 0;
+    let right = 0;
+    for (const u of others) right += counts.get(String(u)) || 0;
+
+    // ここは必ず更新
+    if (diffEl) diffEl.textContent = `${left}-${right}`;
+    if (leftEl) leftEl.textContent = `${primary}: ${left}`;
+    if (rightEl) rightEl.textContent = `Others: ${right}`;
+
+    console.log('[tab1 ok]', { primary, left, right, users });
+  } catch (err) {
+    console.error('[tab1 error]', err);
   }
-
-  const left = counts.get(String(primary)) || 0;
-  let right = 0;
-  for (const u of others) right += counts.get(String(u)) || 0;
-
-  // ここで必ず数値を書き込む
-  if (diffEl) diffEl.textContent = `${left}-${right}`;
-  if (leftEl) leftEl.textContent = `${primary}: ${left}`;
-  if (rightEl) rightEl.textContent = `Others: ${right}`;
-
-  // デバッグ用（不要になったら消してOK）
-  console.log('[tab1]', { primary, left, right, users, counts: Object.fromEntries(counts) });
 };
-
 
   // ---- rendering: tab2 chart ----------------------------------------------
   let chart = null;
