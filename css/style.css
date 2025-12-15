@@ -206,3 +206,61 @@ body{
 }
 
 .fig-grid { outline: 6px solid lime !important; }
+
+/* --- Tab1 layout: force "notes under number" and keep left/right --- */
+
+.fig-grid {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  row-gap: 28px;
+}
+
+/* big number row */
+.big-number {
+  justify-self: center;
+  text-align: center;
+  line-height: 1;
+}
+
+/* notes row: single row under the number, left/right locked */
+.note-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* note blocks */
+.note {
+  font-weight: 700;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+
+  /* 画面が狭くても “左右のブロックが上下に落ちる” のを避けるための最小幅 */
+  width: 260px;
+  max-width: 40%;
+}
+
+.note-left {
+  text-align: left;
+}
+
+.note-right {
+  text-align: right;
+}
+
+/* subline row */
+.subline {
+  justify-self: center;
+  display: flex;
+  gap: 48px;
+  color: rgba(255,255,255,0.55);
+  font-weight: 700;
+}
+
+/* 画面が狭い時は “上下に落とさず”、文字だけ少し縮める */
+@media (max-width: 560px) {
+  .note { width: 200px; max-width: 46%; font-size: 18px; }
+  .subline { gap: 24px; }
+}
