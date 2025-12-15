@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>⭐DHT⭐カウンター</title>
 
-  <link rel="stylesheet" href="./css/style.css?v=29" />
+  <link rel="stylesheet" href="./css/style.css?v=30" />
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -33,37 +33,34 @@
   <main class="content">
     <!-- Tab 1 -->
     <section id="t1" class="panel active" role="tabpanel">
-      <div class="card">
-        <!-- ここが肝：カード内を grid で固定配置 -->
-        <div class="fig-grid">
-          <!-- Big number -->
-          <div class="big-number">
-            <span id="leftValue">–</span>
-            <span class="dash"> − </span>
-            <span id="rightValue">–</span>
-          </div>
+  <div class="card">
+    <div class="fig-grid">
+      <!-- 1) big number -->
+      <div class="big-number">
+        <span id="leftValue">–</span>
+        <span class="dash"> − </span>
+        <span id="rightValue">–</span>
+      </div>
 
-          <!-- Two note blocks (must be under number, left/right fixed) -->
-          <div class="note note-left">
-            ↑ Cさんに<br>
-            <span class="dht">⭐DHT⭐</span>と<br>
-            言われた回数
-          </div>
+      <!-- 2) notes row (must be right under the number) -->
+      <div class="note-row">
+        <div class="note note-left">
+          <div>↑ Cさんに</div>
+          <div>⭐DHT⭐と</div>
+          <div>言われた回数</div>
+        </div>
 
-          <div class="note note-right">
-            ↑ 他の人に<br>
-            <span class="dht">⭐DHT⭐</span>と<br>
-            言われた回数
-          </div>
-
-          <!-- small counts line -->
-          <div class="subline">
-            <span id="aCount">Cさん: –</span>
-            <span id="othersCount">Others: –</span>
-          </div>
+        <div class="note note-right">
+          <div>↑ 他の人に</div>
+          <div>⭐DHT⭐と</div>
+          <div>言われた回数</div>
         </div>
       </div>
-    </section>
+      
+    </div>
+  </div>
+</section>
+
 
     <!-- Tab 2 -->
     <section id="t2" class="panel" role="tabpanel">
@@ -98,9 +95,9 @@
     __mark('inline');
   </script>
 
-  <script src="js/config.js?v=29"></script>
-  <script src="js/api.js?v=29"></script>
-  <script src="js/main.js?v=29"></script>
+  <script src="js/config.js?v=30"></script>
+  <script src="js/api.js?v=30"></script>
+  <script src="js/main.js?v=30"></script>
 
   <script>
     document.body.insertAdjacentHTML(
