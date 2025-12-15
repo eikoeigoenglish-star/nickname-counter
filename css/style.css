@@ -204,3 +204,5 @@ body{
   .note{ font-size: 18px; }
   .subline{ font-size: 18px; gap: 18px; }
 }
+
+.fig-grid { outline: 6px solid lime !important; }
