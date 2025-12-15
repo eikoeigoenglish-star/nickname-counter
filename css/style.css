@@ -205,8 +205,6 @@ body{
   .subline{ font-size: 18px; gap: 18px; }
 }
 
-.fig-grid { outline: 6px solid lime !important; }
-
 /* --- Tab1 layout: force "notes under number" and keep left/right --- */
 
 .fig-grid {
