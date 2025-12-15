@@ -1,187 +1,206 @@
-/* css/style.css */
+/* style.css */
+
 :root{
-  --bg: #556270;
-  --panel: rgba(0,0,0,0.14);
-  --card: rgba(0,0,0,0.18);
-  --text: rgba(255,255,255,0.92);
-  --muted: rgba(255,255,255,0.75);
-  --muted2: rgba(255,255,255,0.60);
-  --accent: rgba(255,255,255,0.20);
+  --bg: #566372;
+  --card: rgba(0,0,0,.18);
+  --card2: rgba(0,0,0,.14);
+  --text: #eef2f6;
+  --muted: rgba(255,255,255,.75);
+  --muted2: rgba(255,255,255,.6);
+  --tab: rgba(255,255,255,.14);
+  --tabActive: rgba(255,255,255,.18);
+  --stroke: rgba(255,255,255,.14);
+  --radius: 28px;
 }
 
 *{ box-sizing: border-box; }
-html, body{ height: 100%; }
-
+html,body{ height:100%; }
 body{
   margin:0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif;
   background: var(--bg);
   color: var(--text);
 }
 
+.noscript{
+  position:fixed;
+  left:8px; top:8px;
+  z-index:9999;
+  background:#000;
+  color:#f66;
+  padding:6px 8px;
+  border-radius:6px;
+  font:12px monospace;
+}
+
 .header{
-  padding: 28px 18px 10px;
+  padding: 44px 18px 18px;
   text-align:center;
 }
 
 .title{
-  margin: 0 0 10px;
-  font-size: 44px;
-  letter-spacing: 1px;
+  margin: 0 0 12px;
+  font-size: clamp(34px, 6vw, 64px);
+  letter-spacing: .02em;
   font-weight: 800;
 }
 
 .meta{
   font-size: 18px;
   color: var(--muted);
+  min-height: 1.3em;
 }
 
 .tabs{
   display:flex;
   justify-content:center;
-  gap: 14px;
-  padding: 10px 18px 22px;
+  gap: 16px;
+  padding: 8px 16px 18px;
+  flex-wrap: wrap;
 }
 
 .tab{
   border: 0;
-  padding: 12px 18px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.14);
-  color: var(--text);
   cursor: pointer;
-  font-size: 18px;
-  font-weight: 650;
-  outline: none;
+  padding: 16px 22px;
+  border-radius: 18px;
+  background: var(--tab);
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px transparent;
 }
 
 .tab.active{
-  background: rgba(255,255,255,0.22);
-  box-shadow: 0 0 0 2px rgba(255,255,255,0.25) inset;
+  background: var(--tabActive);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.35);
 }
 
 .content{
-  padding: 0 18px 30px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 14px 16px 40px;
 }
 
 .panel{ display:none; }
 .panel.active{ display:block; }
 
 .card{
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 26px;
-  border-radius: 22px;
-  background: var(--panel);
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 30px 26px;
+  box-shadow: 0 14px 60px rgba(0,0,0,.12);
 }
 
-/* --- Tab1 layout --- */
-.big-area{
-  display:flex;
-  flex-direction: column;     /* 重要：縦に積む */
-  align-items: stretch;
-  gap: 18px;
-  min-height: 380px;
-  justify-content: center;
+/* -------------------------------
+   Tab1: “数字の直下に左右文言”
+   肝：fig-grid を 2列グリッドにして固定
+-------------------------------- */
+.fig-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  /* 1) big number
+     2) notes row
+     3) subline row
+  */
+  grid-template-rows: auto auto auto;
+  row-gap: 22px;
+  column-gap: 14px;
+  align-items: end;
+  min-height: 360px;
 }
 
+/* Big number: always centered, spanning both columns */
 .big-number{
-  display:flex;
-  justify-content: center;
-  align-items: baseline;
-  gap: 18px;
-  font-size: 140px;
-  font-weight: 800;
-  letter-spacing: 1px;
+  grid-column: 1 / -1;
+  text-align:center;
+  font-weight: 900;
+  letter-spacing: .02em;
+  font-size: clamp(70px, 10vw, 132px);
+  line-height: 1.05;
+  padding-top: 10px;
 }
 
 .big-number .dash{
-  font-size: 120px;
-  color: var(--muted);
+  opacity: .7;
+  padding: 0 .2em;
 }
 
-/* 重要：数字の直下で左右に分ける */
-.desc-row{
-  display:flex;
-  justify-content: space-between; /* 左端・右端 */
-  align-items: flex-start;
-  width: 100%;
-  gap: 18px;
-  padding: 0 6px;
-}
-
-.desc-block{
-  font-size: 22px;
+/* Notes: fixed to left/right edges INSIDE the card */
+.note{
+  font-size: 24px;
+  font-weight: 700;
   line-height: 1.25;
   color: var(--muted);
-  font-weight: 650;
+  max-width: 18em;
 }
 
-.desc-left{
+.note-left{
+  grid-column: 1;
+  justify-self: start;      /* 左端に固定 */
   text-align: left;
 }
 
-.desc-right{
+.note-right{
+  grid-column: 2;
+  justify-self: end;        /* 右端に固定 */
   text-align: right;
 }
 
-/* JSが更新する補助行（小さめ・中央寄せ） */
-.subline{
-  display:flex;
-  justify-content: center;
-  gap: 28px;
-  font-size: 20px;
-  color: var(--muted2);
-  margin-top: 2px;
+/* emphasize DHT */
+.dht{
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: .02em;
 }
 
-/* --- Tab2 chart --- */
+/* Subline: centered under everything */
+.subline{
+  grid-column: 1 / -1;
+  display:flex;
+  justify-content:center;
+  gap: 44px;
+  color: var(--muted2);
+  font-size: 26px;
+  font-weight: 700;
+  padding-bottom: 6px;
+}
+
+/* -------------------------------
+   Tab2 chart
+-------------------------------- */
 .chart-wrap{
   height: 520px;
+  width: 100%;
 }
 
-.chart-desc{
-  margin-top: 14px;
-  text-align:center;
+.desc{
+  margin-top: 18px;
   color: var(--muted2);
-  font-size: 16px;
+  text-align: center;
+  font-size: 18px;
   line-height: 1.5;
 }
 
-/* --- placeholders --- */
 .placeholder{
-  padding: 80px 0;
   text-align:center;
-  color: var(--muted2);
-  font-size: 18px;
+  color: var(--muted);
+  font-size: 22px;
+  padding: 60px 0;
 }
 
-/* --- responsive --- */
-@media (max-width: 900px){
-  .title{ font-size: 36px; }
-  .meta{ font-size: 16px; }
-
-  .big-number{ font-size: 96px; }
-  .big-number .dash{ font-size: 84px; }
-
-  .desc-block{ font-size: 18px; }
-  .subline{ font-size: 16px; }
-  .chart-wrap{ height: 420px; }
+/* -------------------------------
+   Responsive: “左右は維持”のまま読みやすさを調整
+   ※ここで 1列に落とさない（落とすと上下になるのでNG）
+-------------------------------- */
+@media (max-width: 700px){
+  .card{ padding: 26px 18px; }
+  .note{ font-size: 20px; }
+  .subline{ font-size: 20px; gap: 26px; }
+  .fig-grid{ min-height: 420px; }
 }
 
-@media (max-width: 600px){
-  .tabs{ flex-wrap: wrap; }
-  .tab{ font-size: 16px; }
-
-  .big-number{ font-size: 72px; gap: 12px; }
-  .big-number .dash{ font-size: 64px; }
-
-  /* スマホでは縦積み（読みやすさ優先） */
-  .desc-row{
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .desc-right{ text-align: left; }
-
-  .desc-block{ font-size: 16px; }
+@media (max-width: 420px){
+  .note{ font-size: 18px; }
+  .subline{ font-size: 18px; gap: 18px; }
 }
