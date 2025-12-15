@@ -1,11 +1,3 @@
-/**
- * JSONPでURLを叩いてJSONを取得する
- * CORS回避のため fetch は使わない
- *
- * @param {string} url 例: https://script.google.com/macros/s/.../exec
- * @param {number} timeoutMs
- * @returns {Promise<any>}
- */
 function fetchJsonp(url, timeoutMs = 10000) {
   return new Promise((resolve, reject) => {
     const cbName = "__jsonp_cb_" + Math.random().toString(36).slice(2);
@@ -13,7 +5,7 @@ function fetchJsonp(url, timeoutMs = 10000) {
 
     const timer = setTimeout(() => {
       cleanup();
-      reject(new Error("JSONP timeout"));
+      reject(new Error("JSONP timeout: " + script.src));
     }, timeoutMs);
 
     function cleanup() {
@@ -33,7 +25,7 @@ function fetchJsonp(url, timeoutMs = 10000) {
 
     script.onerror = () => {
       cleanup();
-      reject(new Error("JSONP load error"));
+      reject(new Error("JSONP load error: " + script.src));
     };
 
     document.head.appendChild(script);
