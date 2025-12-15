@@ -27,22 +27,6 @@ function buildCounts(events, users) {
   return counts;
 }
 
-function renderTab1(counts) {
-  const a = counts["Cさん"] || 0;
-  const others =
-    (counts["Sさん"] || 0) +
-    (counts["Hさん"] || 0) +
-    (counts["Yさん"] || 0) +
-    (counts["Aさん"] || 0) +
-    (counts["Dさん"] || 0);
-
-  const diff = a - others;
-
-  $("diffValue").textContent = diff.toLocaleString("ja-JP");
-  $("aCount").textContent = `A: ${a.toLocaleString("ja-JP")}`;
-  $("othersCount").textContent = `(B..F): ${others.toLocaleString("ja-JP")}`;
-}
-
 function parseISODateToUTC(iso) {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d));
@@ -53,6 +37,28 @@ function dayIndexSince(baseISO, iso) {
   const dt = parseISODateToUTC(iso);
   const diffDays = Math.floor((dt - base) / 86400000);
   return diffDays + 1;
+}
+
+/**
+ * Tab1: 「Cさんの合計 −（S/H/Y/A/D の合計）」を大きく "X − Y" で表示
+ * ※HTML側は id="diffValue" をそのまま使い、そこに "X − Y" を入れる方式
+ */
+function renderTab1(counts) {
+  const leftName = "Cさん";
+  const rightNames = ["Sさん", "Hさん", "Yさん", "Aさん", "Dさん"];
+
+  const left = counts[leftName] || 0;
+  const right = rightNames.reduce((sum, n) => sum + (counts[n] || 0), 0);
+
+  // 大きい表示は "X − Y"
+  const diffEl = $("diffValue");
+  if (diffEl) diffEl.textContent = `${left.toLocaleString("ja-JP")} − ${right.toLocaleString("ja-JP")}`;
+
+  // 小さい補助表示（既存DOMを流用）
+  const aCountEl = $("aCount");
+  const othersEl = $("othersCount");
+  if (aCountEl) aCountEl.textContent = `${leftName}: ${left.toLocaleString("ja-JP")}`;
+  if (othersEl) othersEl.textContent = `Others: ${right.toLocaleString("ja-JP")}`;
 }
 
 function renderTab2(events, users, baseDateISO) {
@@ -106,12 +112,12 @@ function renderTab2(events, users, baseDateISO) {
 }
 
 async function main() {
-  // タブ初期化
+  // タブ
   document.querySelectorAll(".tab").forEach(btn => {
     btn.addEventListener("click", () => activateTab(btn.dataset.tab));
   });
 
-  // config確認
+  // config
   if (!window.APP_CONFIG) {
     throw new Error("APP_CONFIG が未定義（config.js 読めてない）");
   }
@@ -123,10 +129,9 @@ async function main() {
 
   setMeta("データ取得中…");
 
-  // ★ JSONPで取得（CORS回避）
+  // JSONPで取得
   const data = await fetchJsonp(cfg.GAS_API_EXEC_URL);
 
-  // 取得確認をmetaに出す（まずここで確実に進捗が見える）
   const events = Array.isArray(data?.events) ? data.events : [];
   const updatedAt = data?.updatedAt ? ` / updatedAt=${data.updatedAt}` : "";
   setMeta(`取得OK: events=${events.length}${updatedAt}`);
@@ -135,11 +140,11 @@ async function main() {
     throw new Error("API returned not-ok: " + JSON.stringify(data));
   }
 
-  // 描画
+  // Tab1
   const counts = buildCounts(events, cfg.USERS);
   renderTab1(counts);
 
-  // グラフは失敗してもタブ①は表示させる
+  // Tab2（失敗してもTab1は出す）
   try {
     renderTab2(events, cfg.USERS, cfg.BASE_DATE);
   } catch (e) {
