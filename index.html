@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>リンさんの呼称カウンター</title>
+  <title>オタクカウント</title>
 
-  <link rel="stylesheet" href="./css/style.css?v=25" />
+  <link rel="stylesheet" href="./css/style.css?v=26" />
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -13,70 +13,81 @@
 <body>
   <header class="header">
     <noscript>
-  <div style="position:fixed;left:8px;top:8px;z-index:9999;background:#000;color:#f66;padding:6px 8px;border-radius:6px;font:12px monospace;">
-    JavaScript が無効です（noscript表示）
-  </div>
-</noscript>
+      <div style="position:fixed;left:8px;top:8px;z-index:9999;background:#000;color:#f66;padding:6px 8px;border-radius:6px;font:12px monospace;">
+        JavaScript が無効です（noscript表示）
+      </div>
+    </noscript>
 
-    <h1 class="title">⭐️ᗪᗝᕼᗴᑎ丅ᗩI⭐️カウンター</h1>
+    <h1 class="title">⭐️ᗪᕼ丅⭐️カウンター</h1>
     <div id="meta" class="meta"></div>
   </header>
 
   <nav class="tabs" role="tablist" aria-label="tabs">
     <button class="tab active" data-tab="t1" role="tab">Fig Since 2026</button>
     <button class="tab" data-tab="t2" role="tab">Graph Since 2026</button>
-    <!--<button class="tab" data-tab="t3" role="tab">③</button>
-    <button class="tab" data-tab="t4" role="tab">④</button>-->
+    <button class="tab" data-tab="t3" role="tab">③</button>
+    <button class="tab" data-tab="t4" role="tab">④</button>
   </nav>
 
   <main class="content">
     <!-- Tab 1 -->
     <section id="t1" class="panel active" role="tabpanel">
-  <div class="big-number">
-    <span id="leftValue">–</span>
-    <span class="dash"> − </span>
-    <span id="rightValue">–</span>
-  </div>
+      <div class="card">
+        <div class="big-area">
+          <!-- 大きな数字 -->
+          <div class="big-number">
+            <span id="leftValue">–</span>
+            <span class="dash"> − </span>
+            <span id="rightValue">–</span>
+          </div>
 
-  <!--<div class="subline">
-    <span id="aCount">Cさん: –</span>
-    <span id="othersCount">Others: –</span>
-  </div>-->
+          <!-- 数字の直下：左右2ブロック -->
+          <div class="desc-row">
+            <div class="desc-block desc-left">
+              <div>↑ Cさんに</div>
+              <div>⭐️ᗪᕼ丅⭐️と</div>
+              <div>言われた回数</div>
+            </div>
 
-  <div class="big-number-caption-row">
-  <div class="caption caption-left">
-    <span class="cap-line">↑ Cさんに</span>
-    <span class="cap-line">⭐️ᗪᕼ丅⭐️と</span>
-    <span class="cap-line">言われた回数</span>
-  </div>
+            <div class="desc-block desc-right">
+              <div>↑ 他の人に</div>
+              <div>⭐️ᗪᕼ丅⭐️と</div>
+              <div>言われた回数</div>
+            </div>
+          </div>
 
-  <div class="caption caption-right">
-    <span class="cap-line">↑ 他の人に</span>
-    <span class="cap-line">⭐️ᗪᕼ丅⭐️と</span>
-    <span class="cap-line">言われた回数</span>
-  </div>
-</div>
-
-</section>
-
+          <!-- JSが更新する補助行（残す） -->
+          <div class="subline">
+            <span id="aCount">Cさん: –</span>
+            <span id="othersCount">Others: –</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- Tab 2 -->
     <section id="t2" class="panel" role="tabpanel">
-      <div class="chart-wrap">
-        <canvas id="cumChart"></canvas>
-      </div>
-      <div class="desc">
-        <div>横軸：2026-01-01 を 1日目とした日数</div>
-        <div>縦軸：累積回数</div>
+      <div class="card">
+        <div class="chart-wrap">
+          <canvas id="cumChart"></canvas>
+        </div>
+        <div class="chart-desc">
+          <div>横軸：2026-01-01 を 1日目とした日数</div>
+          <div>縦軸：累積回数</div>
+        </div>
       </div>
     </section>
 
     <!-- Tab 3 / 4 -->
     <section id="t3" class="panel" role="tabpanel">
-      <div class="placeholder">③ 準備中</div>
+      <div class="card">
+        <div class="placeholder">③ 準備中</div>
+      </div>
     </section>
     <section id="t4" class="panel" role="tabpanel">
-      <div class="placeholder">④ 準備中</div>
+      <div class="card">
+        <div class="placeholder">④ 準備中</div>
+      </div>
     </section>
   </main>
 
@@ -90,9 +101,9 @@
     __mark('inline');
   </script>
 
-  <script src="js/config.js?v=25"></script>
-  <script src="js/api.js?v=25"></script>
-  <script src="js/main.js?v=25"></script>
+  <script src="js/config.js?v=26"></script>
+  <script src="js/api.js?v=26"></script>
+  <script src="js/main.js?v=26"></script>
 
   <script>
     document.body.insertAdjacentHTML(
