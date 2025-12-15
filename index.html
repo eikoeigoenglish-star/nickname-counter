@@ -3,22 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>オタクカウント</title>
+  <title>⭐DHT⭐カウンター</title>
 
-  <link rel="stylesheet" href="./css/style.css?v=26" />
+  <link rel="stylesheet" href="./css/style.css?v=28" />
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
   <header class="header">
     <noscript>
-      <div style="position:fixed;left:8px;top:8px;z-index:9999;background:#000;color:#f66;padding:6px 8px;border-radius:6px;font:12px monospace;">
+      <div class="noscript">
         JavaScript が無効です（noscript表示）
       </div>
     </noscript>
 
-    <h1 class="title">⭐️ᗪᕼ丅⭐️カウンター</h1>
+    <h1 class="title">⭐DHT⭐カウンター</h1>
     <div id="meta" class="meta"></div>
   </header>
 
@@ -33,30 +34,29 @@
     <!-- Tab 1 -->
     <section id="t1" class="panel active" role="tabpanel">
       <div class="card">
-        <div class="big-area">
-          <!-- 大きな数字 -->
+        <!-- ここが肝：カード内を grid で固定配置 -->
+        <div class="fig-grid">
+          <!-- Big number -->
           <div class="big-number">
             <span id="leftValue">–</span>
             <span class="dash"> − </span>
             <span id="rightValue">–</span>
           </div>
 
-          <!-- 数字の直下：左右2ブロック -->
-          <div class="desc-row">
-            <div class="desc-block desc-left">
-              <div>↑ Cさんに</div>
-              <div>⭐️ᗪᕼ丅⭐️と</div>
-              <div>言われた回数</div>
-            </div>
-
-            <div class="desc-block desc-right">
-              <div>↑ 他の人に</div>
-              <div>⭐️ᗪᕼ丅⭐️と</div>
-              <div>言われた回数</div>
-            </div>
+          <!-- Two note blocks (must be under number, left/right fixed) -->
+          <div class="note note-left">
+            ↑ Cさんに<br>
+            <span class="dht">⭐DHT⭐</span>と<br>
+            言われた回数
           </div>
 
-          <!-- JSが更新する補助行（残す） -->
+          <div class="note note-right">
+            ↑ 他の人に<br>
+            <span class="dht">⭐DHT⭐</span>と<br>
+            言われた回数
+          </div>
+
+          <!-- small counts line -->
           <div class="subline">
             <span id="aCount">Cさん: –</span>
             <span id="othersCount">Others: –</span>
@@ -71,7 +71,7 @@
         <div class="chart-wrap">
           <canvas id="cumChart"></canvas>
         </div>
-        <div class="chart-desc">
+        <div class="desc">
           <div>横軸：2026-01-01 を 1日目とした日数</div>
           <div>縦軸：累積回数</div>
         </div>
@@ -80,17 +80,14 @@
 
     <!-- Tab 3 / 4 -->
     <section id="t3" class="panel" role="tabpanel">
-      <div class="card">
-        <div class="placeholder">③ 準備中</div>
-      </div>
+      <div class="card placeholder">③ 準備中</div>
     </section>
     <section id="t4" class="panel" role="tabpanel">
-      <div class="card">
-        <div class="placeholder">④ 準備中</div>
-      </div>
+      <div class="card placeholder">④ 準備中</div>
     </section>
   </main>
 
+  <!-- boot marker -->
   <script>
     window.__boot = [];
     window.__mark = (s) => {
@@ -101,9 +98,9 @@
     __mark('inline');
   </script>
 
-  <script src="js/config.js?v=26"></script>
-  <script src="js/api.js?v=26"></script>
-  <script src="js/main.js?v=26"></script>
+  <script src="js/config.js?v=28"></script>
+  <script src="js/api.js?v=28"></script>
+  <script src="js/main.js?v=28"></script>
 
   <script>
     document.body.insertAdjacentHTML(
