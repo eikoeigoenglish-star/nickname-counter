@@ -237,7 +237,7 @@ const renderTab1 = (events, usersFromApi) => {
       // 取得結果を meta に出す（今出てる表示を維持）
       setMeta(`取得OK: events=${events.length}${updatedAt ? ` / updatedAt=${updatedAt}` : ''}`);
 
-      renderTab1(events);
+      renderTab1(events, payload.users);
       renderTab2(events);
     } catch (e) {
       setMeta(`初期化エラー: ${e && e.message ? e.message : String(e)}`);
