@@ -87,7 +87,7 @@
   };
 
   // 0→目的値へアニメ
-  const animate2 = (leftTo, rightTo, durationMs = 900) => {
+  const animate2 = (leftTo, rightTo, durationMs = 1500) => {
     const leftValueEl = $('leftValue');
     const rightValueEl = $('rightValue');
     const aCountEl = $('aCount');
