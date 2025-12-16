@@ -148,6 +148,18 @@
     const last = Math.max(1, maxDay);
     for (let d = 1; d <= last; d++) dayNums.push(d);
 
+    const COLOR_MAP = {
+      'Cさん': '#ff6b8a',     // pink
+      'Sさん': '#4aa3ff',     // blue
+      'Hさん': '#ffa94d',     // orange
+      'Yさん': '#ffd43b',     // yellow
+      'Aさん': '#63e6be',     // teal
+      'Dさん': '#9775fa',     // purple
+      '予備1さん': '#ced4da', // gray
+      '予備2さん': '#74c0fc', // light blue（Cさんと被らない）
+      'ゲストさん': '#ff8787' // red-pink（Sさんと被らない）
+    };
+
     const datasets = USERS.map((u) => {
       const m = byUserDay.get(u) || new Map();
       let cum = 0;
@@ -155,8 +167,20 @@
         cum += (m.get(d) || 0);
         return cum;
       });
-      return { label: u, data, fill: false, tension: 0.15, pointRadius: 2 };
+
+      const color = COLOR_MAP[u] || '#ffffff';
+
+      return {
+        label: u,
+        data,
+        fill: false,
+        tension: 0.15,
+        pointRadius: 2,
+        borderColor: color,
+        backgroundColor: color
+      };
     });
+
 
     if (chart) { chart.destroy(); chart = null; }
 
