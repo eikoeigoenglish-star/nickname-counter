@@ -24,63 +24,108 @@
   </header>
 
   <nav class="tabs" role="tablist" aria-label="tabs">
-    <button class="tab active" data-tab="t1" role="tab">Fig 2026</button>
-    <button class="tab" data-tab="t2" role="tab">Graph 2026</button>
-    <button class="tab" data-tab="t3" role="tab">History 2026</button>
-    <button class="tab" data-tab="t4" role="tab">Total Since 2025</button>
+    <button class="tab active" data-tab="tTotal" role="tab">Total Since 2025</button>
+    <button class="tab" data-tab="tFig2026" role="tab">Fig 2026</button>
+    <button class="tab" data-tab="tGraph2026" role="tab">Graph 2026</button>
+    <button class="tab" data-tab="tHistory2026" role="tab">History 2026</button>
+    <button class="tab" data-tab="tFig2025" role="tab">Fig 2025</button>
   </nav>
 
+
   <main class="content">
-    <!-- Tab 1 -->
-    <section id="t1" class="panel active" role="tabpanel">
-  <div class="card fig-grid">
 
-    <!-- 数字 -->
-    <div class="big-number">
-      <span id="leftValue">–</span>
-      <span class="dash"> − </span>
-      <span id="rightValue">–</span>
-    </div>
-
-    <!-- 数字の直下：左右の文言（3行固定） -->
-    <div class="note-row">
-      <div class="note note-left">
-        <div>Cさんに　　↑</div>
-        <div>⭐DHT⭐と</div>
-        <div>言われた回数</div>
+  <!-- Total Since 2025 (default active) -->
+  <section id="tTotal" class="panel active" role="tabpanel">
+    <div class="card fig-grid">
+      <div class="big-number">
+        <span id="totalLeftValue">–</span>
+        <span class="dash"> − </span>
+        <span id="totalRightValue">–</span>
       </div>
 
-      <div class="note note-right">
-        <div>↑　　他の人に</div>
-        <div>⭐DHT⭐と</div>
-        <div>言われた回数</div>
-      </div>
-    </div>
-
-  </div>
-</section>
-    
-    <!-- Tab 2 -->
-    <section id="t2" class="panel" role="tabpanel">
-      <div class="card">
-        <div class="chart-wrap">
-          <canvas id="cumChart"></canvas>
+      <div class="note-row">
+        <div class="note note-left">
+          <div>Cさんに　　↑</div>
+          <div>⭐DHT⭐と</div>
+          <div>言われた回数</div>
         </div>
-        <div class="desc">
-          <div>横軸：2026-01-01 を 1日目とした日数</div>
-          <div>縦軸：累積回数</div>
+        <div class="note note-right">
+          <div>↑　　他の人に</div>
+          <div>⭐DHT⭐と</div>
+          <div>言われた回数</div>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- Tab 3 / 4 -->
-    <section id="t3" class="panel" role="tabpanel">
-      <div class="card placeholder">③ 準備中</div>
-    </section>
-    <section id="t4" class="panel" role="tabpanel">
-      <div class="card placeholder">④ 準備中</div>
-    </section>
-  </main>
+  <!-- Fig 2026 -->
+  <section id="tFig2026" class="panel" role="tabpanel">
+    <div class="card fig-grid">
+      <div class="big-number">
+        <span id="fig2026LeftValue">–</span>
+        <span class="dash"> − </span>
+        <span id="fig2026RightValue">–</span>
+      </div>
+
+      <div class="note-row">
+        <div class="note note-left">
+          <div>Cさんに　　↑</div>
+          <div>⭐DHT⭐と</div>
+          <div>言われた回数</div>
+        </div>
+        <div class="note note-right">
+          <div>↑　　他の人に</div>
+          <div>⭐DHT⭐と</div>
+          <div>言われた回数</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Graph 2026 -->
+  <section id="tGraph2026" class="panel" role="tabpanel">
+    <div class="card">
+      <div class="chart-wrap">
+        <canvas id="cumChart"></canvas>
+      </div>
+      <div class="desc">
+        <div>横軸：2026-01-01 を 1日目とした日数</div>
+        <div>縦軸：累積回数</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- History 2026 (later) -->
+  <section id="tHistory2026" class="panel" role="tabpanel">
+    <div class="card placeholder">準備中</div>
+  </section>
+
+  <!-- Fig 2025 -->
+  <section id="tFig2025" class="panel" role="tabpanel">
+    <div class="card fig-grid">
+      <div class="big-number">
+        <span id="fig2025LeftValue">–</span>
+        <span class="dash"> − </span>
+        <span id="fig2025RightValue">–</span>
+      </div>
+
+      <div class="note-row">
+        <div class="note note-left">
+          <div>Cさんに　　↑</div>
+          <div>⭐DHT⭐と</div>
+          <div>言われた回数</div>
+        </div>
+        <div class="note note-right">
+          <div>↑　　他の人に</div>
+          <div>⭐DHT⭐と</div>
+          <div>言われた回数</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
 
   <!-- boot marker -->
   <script>
