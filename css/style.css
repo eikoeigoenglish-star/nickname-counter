@@ -118,20 +118,37 @@ body{
 }
 
 /* big number centered in the middle column */
+/* big number centered in the middle column */
 .big-number{
   grid-column: 2;
   grid-row: 1;
-  text-align:center;
+
+  display: flex;              /* ← 追加 */
+  justify-content: center;    /* ← 追加 */
+  align-items: baseline;      /* ← 追加 */
+  flex-wrap: nowrap;          /* ← 追加 */
+  white-space: nowrap;        /* ← 追加 */
+
+  text-align: center;
   font-weight: 900;
-  letter-spacing:.02em;
-  font-size: clamp(56px, 12vw, 132px);
-  margin-top: 40px; /* 数字を少し下げる（好みで調整） */
+  letter-spacing: .02em;
+  line-height: 1;             /* ← 追加（縦のブレ防止） */
+
+  /* 4桁想定で少しだけ上限を抑える（好みで微調整OK） */
+  font-size: clamp(56px, 10vw, 124px);
+
+  margin-top: 40px;
 }
+
+.big-number > span{
+  display: inline-block;      /* ← 追加（安定化） */
+}
+
 .big-number .dash{
-  display:inline-block;
   margin: 0 .22em;
   opacity: .55;
 }
+
 
 /* note row: appears right under the number */
 .note-row{
