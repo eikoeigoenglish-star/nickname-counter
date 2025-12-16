@@ -172,6 +172,95 @@
     });
   };
 
+  // History 2026：日付降順テーブル + 10件ページング
+let histRows = [];
+let histPage = 1;
+const HIST_PAGE_SIZE = 10;
+
+const isValidHttpUrl = (s) => {
+  try {
+    const u = new URL(String(s || ''));
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+const buildHistoryRows2026 = (events, usersFromApi) => {
+  const cfgUsers = Array.isArray(window.APP_CONFIG?.USERS) ? window.APP_CONFIG.USERS : [];
+  const users = (Array.isArray(usersFromApi) && usersFromApi.length ? usersFromApi : cfgUsers)
+    .map(norm)
+    .filter(Boolean);
+  const allow = new Set(users);
+
+  const rows = [];
+  for (const e of events || []) {
+    const name = norm(e?.name);
+    const date = String(e?.date || '');
+    const url  = String(e?.url || '');
+
+    if (!name || !date) continue;
+    if (allow.size && !allow.has(name)) continue;
+    if (!inRange(date, '2026-01-01', '2026-12-31')) continue;
+
+    rows.push({ date, name, url });
+  }
+
+  // 日付降順（同日なら name 昇順で安定化）
+  rows.sort((a, b) => (b.date.localeCompare(a.date) || a.name.localeCompare(b.name)));
+  return rows;
+};
+
+const renderHistoryPage = () => {
+  const body = $('histBody');
+  const prevBtn = $('histPrev');
+  const nextBtn = $('histNext');
+  const info = $('histPageInfo');
+
+  if (!body || !prevBtn || !nextBtn || !info) return;
+
+  const total = histRows.length;
+  const totalPages = Math.max(1, Math.ceil(total / HIST_PAGE_SIZE));
+  histPage = Math.min(Math.max(1, histPage), totalPages);
+
+  const start = (histPage - 1) * HIST_PAGE_SIZE;
+  const pageRows = histRows.slice(start, start + HIST_PAGE_SIZE);
+
+  body.innerHTML = '';
+
+  if (!pageRows.length) {
+    body.innerHTML = `<tr><td colspan="3" class="hist-empty">データなし</td></tr>`;
+  } else {
+    for (const r of pageRows) {
+      const urlCell = r.url
+        ? (isValidHttpUrl(r.url)
+            ? `<a href="${r.url}" target="_blank" rel="noopener noreferrer">open</a>`
+            : `<span>${r.url}</span>`)
+        : `<span></span>`;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.date}</td>
+        <td>${r.name}</td>
+        <td class="col-url">${urlCell}</td>
+      `;
+      body.appendChild(tr);
+    }
+  }
+
+  info.textContent = `${histPage} / ${totalPages}（${total}件）`;
+  prevBtn.disabled = histPage <= 1;
+  nextBtn.disabled = histPage >= totalPages;
+};
+
+const initHistoryPager = () => {
+  const prevBtn = $('histPrev');
+  const nextBtn = $('histNext');
+  if (prevBtn) prevBtn.addEventListener('click', () => { histPage--; renderHistoryPage(); });
+  if (nextBtn) nextBtn.addEventListener('click', () => { histPage++; renderHistoryPage(); });
+};
+
+
   // main.js 内蔵JSONP（api.js が無い場合の保険）
   const fetchJsonpLocal = (url, timeoutMs = 12000) =>
     new Promise((resolve, reject) => {
@@ -227,6 +316,7 @@
 
   const main = async () => {
     initTabs();
+    initHistoryPager();
 
     const payload = await loadData();
     if (!payload || payload.ok !== true) throw new Error('payload not ok');
@@ -244,6 +334,12 @@
 
     // Fig 2025（2025年だけ）
     renderFig(events, payload.users, '2025-01-01', '2025-12-31', 'fig2025LeftValue', 'fig2025RightValue');
+
+    // History 2026
+    histRows = buildHistoryRows2026(events, payload.users);
+    histPage = 1;
+    renderHistoryPage();
+
   };
 
   if (document.readyState === 'loading') {
