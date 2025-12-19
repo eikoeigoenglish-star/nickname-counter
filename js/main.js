@@ -89,31 +89,34 @@
 
   // Fig（Cさん vs Others）をレンジ指定で描画
   const renderFig = (events, usersFromApi, from, to, leftId, rightId) => {
-    // users は API優先、なければ config の USERS
-    const cfgUsers = Array.isArray(window.APP_CONFIG?.USERS) ? window.APP_CONFIG.USERS : [];
-    const users = (Array.isArray(usersFromApi) && usersFromApi.length ? usersFromApi : cfgUsers)
-      .map(norm)
-      .filter(Boolean);
+  const cfgUsers = Array.isArray(window.APP_CONFIG?.USERS) ? window.APP_CONFIG.USERS : [];
+  const apiUsers = Array.isArray(usersFromApi) ? usersFromApi : [];
 
-    const primary = 'Cさん';
-    const allow = new Set(users.length ? users : [primary]);
+  // ★ API優先ではなく「和集合」にする
+  const users = Array.from(new Set([...apiUsers, ...cfgUsers]))
+    .map(norm)
+    .filter(Boolean);
 
-    let cCount = 0;
-    let othersCount = 0;
+  const primary = 'Cさん';
+  const allow = new Set(users.length ? users : [primary]);
 
-    for (const e of events || []) {
-      const name = norm(e?.name);
-      const date = String(e?.date || '');
-      if (!name) continue;
-      if (allow.size && !allow.has(name)) continue;
-      if (!inRange(date, from, to)) continue;
+  let cCount = 0;
+  let othersCount = 0;
 
-      if (name === primary) cCount++;
-      else othersCount++;
-    }
+  for (const e of events || []) {
+    const name = norm(e?.name);
+    const date = String(e?.date || '');
+    if (!name) continue;
+    if (allow.size && !allow.has(name)) continue;
+    if (!inRange(date, from, to)) continue;
 
-    animate2(cCount, othersCount, leftId, rightId, 900);
-  };
+    if (name === primary) cCount++;
+    else othersCount++;
+  }
+
+  animate2(cCount, othersCount, leftId, rightId, 900);
+};
+
 
   // Graph 2026：累積折れ線（2026年だけ）
   let chart = null;
