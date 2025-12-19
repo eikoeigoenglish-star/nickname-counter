@@ -158,8 +158,8 @@
       'Yさん': '#ffd43b',     // yellow
       'Aさん': '#63e6be',     // teal
       'Dさん': '#9775fa',     // purple
-      '予備1さん': '#ced4da', // gray
-      '予備2さん': '#74c0fc', // light blue（Cさんと被らない）
+      'Syさん': '#ced4da', // gray
+      '予備さん': '#74c0fc', // light blue（Cさんと被らない）
       'ゲストさん': '#ff8787' // red-pink（Sさんと被らない）
     };
 
