@@ -430,3 +430,30 @@ body{
   font-size: 1.1rem;
 }
 
+/* ===== Total 2026 表示サイズを Total Since 2025 と揃える ===== */
+
+#tTotal2026 .big-number {
+  font-size: 6.5rem;   /* Total Since 2025 と同等 */
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+}
+
+/* 下の説明文ブロックを中央寄せ & 同スケールに */
+#tTotal2026 .note-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.8rem;
+}
+
+#tTotal2026 .note {
+  text-align: center;
+  font-size: 1.25rem;  /* ← Total Since 2025 と同等 */
+  line-height: 1.4;
+}
+
+/* ↑ の位置を少し上げて視覚的バランス調整 */
+#tTotal2026 .note div:first-child {
+  margin-bottom: 0.2rem;
+}
+
