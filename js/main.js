@@ -114,6 +114,33 @@
     else othersCount++;
   }
 
+  // Total（全員合計）をレンジ指定で描画
+const renderTotalAll = (events, usersFromApi, from, to, valueId) => {
+  const cfgUsers = Array.isArray(window.APP_CONFIG?.USERS) ? window.APP_CONFIG.USERS : [];
+  const apiUsers = Array.isArray(usersFromApi) ? usersFromApi : [];
+
+  // 和集合（途中追加ユーザーを落とさない）
+  const users = Array.from(new Set([...apiUsers, ...cfgUsers]))
+    .map(norm)
+    .filter(Boolean);
+
+  const allow = new Set(users); // 空なら全通しにしてもいいが、今はUSERS管理を尊重
+
+  let total = 0;
+  for (const e of events || []) {
+    const name = norm(e?.name);
+    const date = String(e?.date || '');
+    if (!name) continue;
+    if (allow.size && !allow.has(name)) continue;
+    if (!inRange(date, from, to)) continue;
+    total++;
+  }
+
+  // 右側は触らない（–のまま）。左側だけカウントアップ表示
+  animate2(total, 0, valueId, '___dummy___', 900);
+};
+
+
   animate2(cCount, othersCount, leftId, rightId, 900);
 };
 
@@ -351,7 +378,8 @@ const initHistoryPager = () => {
     const events = Array.isArray(payload.events) ? payload.events : [];
 
     // Total Since 2025（2025-01-01以降）
-    renderFig(events, payload.users, '2025-01-01', null, 'totalLeftValue', 'totalRightValue');
+    // Total Since 2025（2025-01-01以降）※全員合計
+    renderTotalAll(events, payload.users, '2025-01-01', null, 'totalLeftValue');
 
     // Fig 2026（2026年だけ）
     renderFig(events, payload.users, '2026-01-01', '2026-12-31', 'fig2026LeftValue', 'fig2026RightValue');
