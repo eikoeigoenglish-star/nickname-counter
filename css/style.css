@@ -367,4 +367,29 @@ body{
   margin-bottom: 4px;
 }
 
+/* Total Since 2025: big number */
+#tTotal .big-number {
+  text-align: center;
+}
+
+#tTotal .big-number span {
+  font-size: clamp(96px, 12vw, 180px); /* ここで大きさ調整 */
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.0;
+}
+
+/* Total Since 2025: note centering */
+#tTotal .note-row {
+  justify-content: center; /* row全体を中央へ */
+}
+
+#tTotal .note {
+  text-align: center;      /* 文字を中央寄せ */
+  align-items: center;     /* flex前提なら保険 */
+}
+
+#tTotal .note > div {
+  width: 100%;
+}
 
