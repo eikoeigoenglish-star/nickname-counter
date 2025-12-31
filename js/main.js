@@ -110,6 +110,11 @@
     requestAnimationFrame(step);
   };
 
+  const clearTextIfExists = (id, value = ' ') => {
+    const el = $(id);
+    if (el) el.textContent = value;
+  };
+
   // users の和集合（途中追加ユーザーを落とさない）
   const mergedUsers = (usersFromApi) => {
     const cfgUsers = Array.isArray(window.APP_CONFIG?.USERS) ? window.APP_CONFIG.USERS : [];
@@ -140,7 +145,7 @@
     animate2(cCount, othersCount, leftId, rightId, 900);
   };
 
-  // Total（全員合計）をレンジ指定で描画（Total Since 2025 用）
+  // Total（全員合計）をレンジ指定で描画（単一値・センター表示前提）
   const renderTotalAll = (events, usersFromApi, from, to, valueId) => {
     const users = mergedUsers(usersFromApi);
     const allow = new Set(users); // USERS管理を尊重
@@ -155,12 +160,7 @@
       total++;
     }
 
-    // 左だけ更新（右はそのまま）
     animate1(total, valueId, 900);
-
-    // 右側を空にしたい場合（HTMLに totalRightValue がある前提）
-    const right = $('totalRightValue');
-    if (right) right.textContent = ' ';
   };
 
   // Graph 2026：累積折れ線（2026年だけ）
@@ -301,7 +301,7 @@
       body.innerHTML = `<tr><td colspan="3" class="hist-empty">データなし</td></tr>`;
     } else {
       for (const r of pageRows) {
-        const linkText = 'open'; // カラム名を「リンク」にしたいならHTML側の見出しだけ変える
+        const linkText = 'open';
         const urlCell = r.url
           ? (isValidHttpUrl(r.url)
               ? `<a href="${r.url}" target="_blank" rel="noopener noreferrer">${linkText}</a>`
@@ -392,22 +392,33 @@
 
     const events = Array.isArray(payload.events) ? payload.events : [];
 
-    // Total Since 2025：全員合計（左だけ使う）
-    renderTotalAll(events, payload.users, '2025-01-01', null, 'totalLeftValue');
+    // ===== ここから “仕様変更” 反映 =====
 
-    // Fig 2026：Cさん vs Others
-    renderFig(events, payload.users, '2026-01-01', '2026-12-31', 'fig2026LeftValue', 'fig2026RightValue');
+    // Total Since 2025：全員合計（中央1値）
+    // ※ HTML側が totalLeftValue 1つならOK。残ってる右側は念のため空に。
+    renderTotalAll(events, payload.users, '2025-01-01', null, 'totalLeftValue');
+    clearTextIfExists('totalRightValue', ' ');
+
+    // Total 2026（旧 Fig 2026）：2026年だけの全員合計（中央1値）
+    // ※ HTML側：<span id="total2026Value">–</span> を想定
+    renderTotalAll(events, payload.users, '2026-01-01', '2026-12-31', 'total2026Value');
 
     // Graph 2026：和集合 users で描画
     renderTabGraph2026(events, payload.users);
 
-    // Fig 2025：Cさん vs Others
+    // Fig 2025：Cさん vs Others（ここは左右のまま）
     renderFig(events, payload.users, '2025-01-01', '2025-12-31', 'fig2025LeftValue', 'fig2025RightValue');
 
     // History 2026
     histRows = buildHistoryRows2026(events, payload.users);
     histPage = 1;
     renderHistoryPage();
+
+    // 旧 Fig 2026 のIDが残ってても事故らないように空に（保険）
+    clearTextIfExists('fig2026LeftValue', ' ');
+    clearTextIfExists('fig2026RightValue', ' ');
+
+    // ===== 仕様変更ここまで =====
   };
 
   if (document.readyState === 'loading') {
