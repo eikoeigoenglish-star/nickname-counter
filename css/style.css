@@ -1,4 +1,4 @@
-/* style.css */
+/* style.css (FULL REPLACE / refactored) */
 
 /* ------------------------------
    Base
@@ -6,7 +6,6 @@
 :root{
   --bg: #5c6673;
   --card: rgba(0,0,0,.18);
-  --card2: rgba(255,255,255,.06);
   --text: #f1f5f9;
   --muted: rgba(255,255,255,.75);
   --muted2: rgba(255,255,255,.55);
@@ -15,10 +14,16 @@
   --radius2: 18px;
 
   --maxw: 1100px;
+
+  /* “Total系”の見た目を揃えるための共通スケール */
+  --total-num: clamp(96px, 12vw, 180px);
+  --total-note: 28px;
+  --total-arrow: 32px;
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP",
@@ -92,7 +97,7 @@ body{
 .panel.active{ display:block; }
 
 /* ------------------------------
-   Card (Tab1/Tab2 common container)
+   Card
 ------------------------------ */
 .card{
   background: var(--card);
@@ -103,11 +108,7 @@ body{
 }
 
 /* ------------------------------
-   Tab1 layout: fig-grid
-   3 rows:
-     1) big number
-     2) note-row (left/right text)  <-- must be "just under number"
-     3) subline
+   fig-grid (Tab1/Tab2 style container)
 ------------------------------ */
 .fig-grid{
   display:grid;
@@ -117,40 +118,34 @@ body{
   align-content: start;
 }
 
-/* big number centered in the middle column */
-/* big number centered in the middle column */
+/* big number (center) */
 .big-number{
   grid-column: 2;
   grid-row: 1;
 
-  display: flex;              /* ← 追加 */
-  justify-content: center;    /* ← 追加 */
-  align-items: baseline;      /* ← 追加 */
-  flex-wrap: nowrap;          /* ← 追加 */
-  white-space: nowrap;        /* ← 追加 */
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 
   text-align: center;
   font-weight: 900;
   letter-spacing: .02em;
-  line-height: 1;             /* ← 追加（縦のブレ防止） */
+  line-height: 1;
 
-  /* 4桁想定で少しだけ上限を抑える（好みで微調整OK） */
+  /* “通常”のfig用：ここは控えめ（Total系はIDで上書きする） */
   font-size: clamp(56px, 10vw, 124px);
 
   margin-top: 40px;
 }
-
-.big-number > span{
-  display: inline-block;      /* ← 追加（安定化） */
-}
-
+.big-number > span{ display:inline-block; }
 .big-number .dash{
   margin: 0 .22em;
   opacity: .55;
 }
 
-
-/* note row: appears right under the number */
+/* note row (default: left/right) */
 .note-row{
   grid-column: 2;
   grid-row: 2;
@@ -160,19 +155,17 @@ body{
   column-gap: 24px;
   align-items:start;
 }
-
-/* left/right blocks anchored to edges of the middle column */
 .note{
   font-size: 28px;
   font-weight: 800;
   color: var(--muted);
   line-height: 1.1;
-  white-space: nowrap; /* 3行以外に折れない */
+  white-space: nowrap;
 }
 .note-left{ justify-self: start; text-align:left; }
 .note-right{ justify-self: end; text-align:right; }
 
-/* subline centered below note-row */
+/* subline */
 .subline{
   grid-column: 2;
   grid-row: 3;
@@ -187,7 +180,82 @@ body{
 }
 
 /* ------------------------------
-   Tab2 chart
+   TOTAL TABS (unified)
+   - #tTotal: big-number + note-row (center)
+   - #tTotal2026: total-center + total-number + total-caption (center)
+   どちらでも “同じ大きさ” になるように揃える
+------------------------------ */
+
+/* 共通：Totalタブは説明文を中央寄せ */
+#tTotal .note-row,
+#tTotal2026 .note-row{
+  display:flex;
+  justify-content:center;
+  margin-top: 24px;
+}
+#tTotal .note,
+#tTotal2026 .note{
+  text-align:center;
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.1;
+}
+#tTotal .note > div,
+#tTotal2026 .note > div{
+  width: 100%;
+}
+
+/* Total Since 2025：big-number内の数字（span）を巨大化 */
+#tTotal .big-number{
+  justify-content:center;
+}
+#tTotal .big-number > span{
+  font-size: var(--total-num);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.0;
+}
+
+/* Total 2026：total-center方式（あなたのHTMLがこれ） */
+.total-center{
+  display:flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+.total-number{
+  font-size: var(--total-num);
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+  line-height: 1.0;
+  margin: 0;
+}
+.total-caption{
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--total-note);
+  font-weight: 800;
+  line-height: 1.1;
+  margin-top: 24px;
+}
+.total-caption .arrow{
+  display:block;
+  font-size: var(--total-arrow);
+  margin: 0 0 6px 0;
+}
+
+/* 念のため：Total 2026 が big-number方式になっても同サイズにする */
+#tTotal2026 .big-number > span{
+  font-size: var(--total-num);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.0;
+}
+
+/* ------------------------------
+   Chart
 ------------------------------ */
 .chart-wrap{
   background: var(--card);
@@ -201,54 +269,7 @@ body{
 }
 
 /* ------------------------------
-   Small screens
-   - Keep "note-row" still under the number
-   - Keep left block left, right block right (within the middle column)
-   - Reduce font sizes so it fits
------------------------------- */
-@media (max-width: 900px){
-  .card{ padding: 34px 26px; min-height: 520px; }
-
-  .fig-grid{
-    grid-template-columns: 1fr minmax(0, 520px) 1fr;
-    row-gap: 18px;
-  }
-
-  .note{ font-size: 22px; }
-  .subline{ font-size: 22px; gap: 28px; }
-}
-
-@media (max-width: 560px){
-  .tabs{ gap: 10px; }
-  .tab{ font-size: 18px; padding: 14px 18px; }
-
-  .fig-grid{
-    /* 端末が狭い時は左右の余白列を薄くして中央列を確保 */
-    grid-template-columns: 10px 1fr 10px;
-  }
-
-  .big-number{
-    margin-top: 28px;
-  }
-
-  .note-row{
-    /* 2列維持。上下に崩さない */
-    grid-template-columns: 1fr 1fr;
-    column-gap: 14px;
-  }
-
-  .note{
-    font-size: 18px;
-  }
-
-  .subline{
-    font-size: 18px;
-    gap: 18px;
-  }
-}
-
-/* ------------------------------
-   Placeholder (Tab3/Tab4)
+   Placeholder
 ------------------------------ */
 .placeholder{
   opacity:.7;
@@ -267,7 +288,6 @@ body{
   gap: 16px;
   margin-bottom: 18px;
 }
-
 .pager-btn{
   border: 0;
   cursor: pointer;
@@ -283,7 +303,6 @@ body{
   opacity: .35;
   cursor: default;
 }
-
 .pager-info{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   color: var(--muted);
@@ -291,12 +310,10 @@ body{
   min-width: 160px;
   text-align: center;
 }
-
 .table-wrap{
   overflow-x: auto;
   border-radius: var(--radius2);
 }
-
 .hist-table{
   width: 100%;
   border-collapse: collapse;
@@ -304,156 +321,73 @@ body{
   border-radius: var(--radius2);
   overflow: hidden;
 }
-
 .hist-table th,
 .hist-table td{
   padding: 14px 16px;
   border-bottom: 1px solid rgba(255,255,255,.08);
   font-size: 18px;
 }
-
 .hist-table th{
   text-align: left;
   color: var(--muted);
   font-weight: 900;
   background: rgba(255,255,255,.06);
 }
-
-.hist-table tr:last-child td{
-  border-bottom: 0;
-}
-
+.hist-table tr:last-child td{ border-bottom: 0; }
 .col-date{ width: 160px; white-space: nowrap; }
 .col-name{ width: 140px; white-space: nowrap; }
-
 .col-url a{
   color: var(--text);
   text-decoration: underline;
   text-underline-offset: 3px;
   word-break: break-all;
 }
-
 .hist-empty{
   color: var(--muted2);
   text-align: center;
   padding: 30px 10px;
 }
 
-.total-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
+/* ------------------------------
+   Responsive
+------------------------------ */
+@media (max-width: 900px){
+  .card{ padding: 34px 26px; min-height: 520px; }
+
+  .fig-grid{
+    grid-template-columns: 1fr minmax(0, 520px) 1fr;
+    row-gap: 18px;
+  }
+
+  .note{ font-size: 22px; }
+  .subline{ font-size: 22px; gap: 28px; }
+
+  /* Total系：説明文も少し落とす */
+  :root{
+    --total-note: 22px;
+    --total-arrow: 26px;
+  }
 }
 
-.total-number {
-  font-size: 96px;
-  font-weight: 700;
-  color: #ffffff;
-  line-height: 1.1;
-  margin-bottom: 20px;
+@media (max-width: 560px){
+  .tabs{ gap: 10px; }
+  .tab{ font-size: 18px; padding: 14px 18px; }
+
+  .fig-grid{
+    grid-template-columns: 10px 1fr 10px;
+  }
+  .big-number{ margin-top: 28px; }
+
+  .note-row{
+    grid-template-columns: 1fr 1fr;
+    column-gap: 14px;
+  }
+  .note{ font-size: 18px; }
+  .subline{ font-size: 18px; gap: 18px; }
+
+  /* Total系：さらに少し落とす */
+  :root{
+    --total-note: 18px;
+    --total-arrow: 22px;
+  }
 }
-
-.total-caption {
-  text-align: center;
-  color: #e6e6e6;
-  font-size: 20px;
-  line-height: 1.4;
-}
-
-.total-caption .arrow {
-  font-size: 22px;
-  margin-bottom: 4px;
-}
-
-/* Total Since 2025: big number */
-#tTotal .big-number {
-  text-align: center;
-}
-
-#tTotal .big-number span {
-  font-size: clamp(96px, 12vw, 180px); /* ここで大きさ調整 */
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  line-height: 1.0;
-}
-
-/* Total Since 2025: note centering */
-#tTotal .note-row {
-  justify-content: center; /* row全体を中央へ */
-}
-
-#tTotal .note {
-  text-align: center;      /* 文字を中央寄せ */
-  align-items: center;     /* flex前提なら保険 */
-}
-
-#tTotal .note > div {
-  width: 100%;
-}
-
-/* Total Since 2025 の説明文を中央寄せ */
-#tTotal .note-row {
-  display: flex;
-  justify-content: center;
-  margin-top: 24px;
-}
-
-#tTotal .note {
-  text-align: center;
-  align-items: center;
-}
-
-#tTotal .note div {
-  line-height: 1.4;
-}
-
-/* Total 2026 の中央数字を大きく */
-#tTotal2026 .big-number {
-  font-size: 6rem;       /* ← 好みに応じて 5〜7rem で調整可 */
-  font-weight: 700;
-  text-align: center;
-  line-height: 1.1;
-}
-
-/* Total 2026 の注釈を中央寄せ */
-#tTotal2026 .note-row {
-  display: flex;
-  justify-content: center;
-  margin-top: 1.5rem;
-}
-
-#tTotal2026 .note {
-  text-align: center;
-  line-height: 1.4;
-  font-size: 1.1rem;
-}
-
-/* ===== Total 2026 表示サイズを Total Since 2025 と揃える ===== */
-
-#tTotal2026 .big-number {
-  font-size: 6.5rem;   /* Total Since 2025 と同等 */
-  font-weight: 700;
-  line-height: 1.1;
-  text-align: center;
-}
-
-/* 下の説明文ブロックを中央寄せ & 同スケールに */
-#tTotal2026 .note-row {
-  display: flex;
-  justify-content: center;
-  margin-top: 1.8rem;
-}
-
-#tTotal2026 .note {
-  text-align: center;
-  font-size: 1.25rem;  /* ← Total Since 2025 と同等 */
-  line-height: 1.4;
-}
-
-/* ↑ の位置を少し上げて視覚的バランス調整 */
-#tTotal2026 .note div:first-child {
-  margin-bottom: 0.2rem;
-}
-
