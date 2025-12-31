@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>リンさんカウンター</title>
 
-  <link rel="stylesheet" href="./css/style.css?v=52" />
+  <link rel="stylesheet" href="./css/style.css?v=53" />
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -26,7 +26,7 @@
 
   <nav class="tabs" role="tablist" aria-label="tabs">
     <button class="tab active" data-tab="tTotal" role="tab">Total Since 2025</button>
-    <button class="tab" data-tab="tFig2026" role="tab">Fig 2026</button>
+    <button class="tab" data-tab="tTotal2026" role="tab">Total 2026</button>
     <button class="tab" data-tab="tGraph2026" role="tab">Graph 2026</button>
     <button class="tab" data-tab="tHistory2026" role="tab">History 2026</button>
     <button class="tab" data-tab="tFig2025" role="tab">Fig 2025</button>
@@ -55,29 +55,24 @@
 </section>
 
 
-  <!-- Fig 2026 -->
-  <section id="tFig2026" class="panel" role="tabpanel">
-    <div class="card fig-grid">
-      <div class="big-number">
-        <span id="fig2026LeftValue">–</span>
-        <span class="dash"> − </span>
-        <span id="fig2026RightValue">–</span>
-      </div>
+  <!-- Total 2026（旧 Fig 2026）-->
+<section id="tTotal2026" class="panel" role="tabpanel">
+  <div class="card fig-grid">
+    <!-- 2026年の全員合計：中央1値 -->
+    <div class="big-number">
+      <span id="total2026Value">–</span>
+    </div>
 
-      <div class="note-row">
-        <div class="note note-left">
-          <div>Cさんに　　↑</div>
-          <div>⭐ᗪᕼ丅⭐と</div>
-          <div>言われた回数</div>
-        </div>
-        <div class="note note-right">
-          <div>↑　　他の人に</div>
-          <div>⭐ᗪᕼ丅⭐と</div>
-          <div>言われた回数</div>
-        </div>
+    <!-- 下の文言：中央寄せ（CSSで .note-row/.note-center を中央寄せに） -->
+    <div class="note-row">
+      <div class="note note-center">
+        <div>↑</div>
+        <div>⭐ᗪᕼ丅⭐と</div>
+        <div>言われた回数</div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
   <!-- Graph 2026 -->
   <section id="tGraph2026" class="panel" role="tabpanel">
@@ -158,9 +153,9 @@
     __mark('inline');
   </script>
 
-  <script src="js/config.js?v=52"></script>
-  <script src="js/api.js?v=52"></script>
-  <script src="js/main.js?v=52"></script>
+  <script src="js/config.js?v=53"></script>
+  <script src="js/api.js?v=53"></script>
+  <script src="js/main.js?v=53"></script>
 
   <!--
 <script>
