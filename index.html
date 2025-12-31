@@ -20,9 +20,11 @@
     </noscript>
 
     <h1 class="title">リンさんカウンター</h1>
-    <!--<div id="meta" class="meta"></div> -->
+    <!-- meta表示を使うならコメント解除 -->
+    <!-- <div id="meta" class="meta"></div> -->
   </header>
-<!-- DEPLOY_MARK: 2025-12-31-XXXX -->
+
+  <!-- DEPLOY_MARK: 2025-12-31-XXXX -->
 
   <nav class="tabs" role="tablist" aria-label="tabs">
     <button class="tab active" data-tab="tTotal" role="tab">Total Since 2025</button>
@@ -32,96 +34,112 @@
     <button class="tab" data-tab="tFig2025" role="tab">Fig 2025</button>
   </nav>
 
-
   <main class="content">
 
-<!-- Total 2026 -->
-<section id="tTotal2026" class="panel" role="tabpanel">
-  <div class="card fig-grid total-only">
-    <!-- 数字（1つだけ・センター） -->
-    <div class="big-number total-number">
-      <span id="total2026Value">–</span>
-    </div>
-
-    <!-- 数字の直下：センタリング文言（3行固定） -->
-    <div class="note-row total-note">
-      <div class="note note-center">
-        <div>↑</div>
-        <div>⭐ᗪᕼ丅⭐と</div>
-        <div>言われた回数</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-
-  <!-- Graph 2026 -->
-  <section id="tGraph2026" class="panel" role="tabpanel">
-    <div class="card">
-      <div class="chart-wrap">
-        <canvas id="cumChart"></canvas>
-      </div>
-      <div class="desc">
-        <div>横軸：2026-01-01 を 1日目とした日数</div>
-        <div>縦軸：累積回数</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- History 2026 (later) -->
-  <!-- History 2026 -->
-<section id="tHistory2026" class="panel" role="tabpanel">
-  <div class="card">
-    <div class="pager">
-      <button id="histPrev" class="pager-btn" type="button" aria-label="prev">◀</button>
-      <div id="histPageInfo" class="pager-info">–</div>
-      <button id="histNext" class="pager-btn" type="button" aria-label="next">▶</button>
-    </div>
-
-    <div class="table-wrap">
-      <table class="hist-table">
-        <thead>
-          <tr>
-            <th class="col-date">日付</th>
-            <th class="col-name">発言者</th>
-            <th class="col-url">リンク</th>
-          </tr>
-        </thead>
-        <tbody id="histBody">
-          <tr><td colspan="3" class="hist-empty">読み込み中…</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
-
-  <!-- Fig 2025 -->
-  <section id="tFig2025" class="panel" role="tabpanel">
-    <div class="card fig-grid">
-      <div class="big-number">
-        <span id="fig2025LeftValue">–</span>
-        <span class="dash"> − </span>
-        <span id="fig2025RightValue">–</span>
-      </div>
-
-      <div class="note-row">
-        <div class="note note-left">
-          <div>Cさんに　　↑</div>
-          <div>⭐ᗪᕼ丅⭐と</div>
-          <div>言われた回数</div>
+    <!-- Total Since 2025 (default active) -->
+    <section id="tTotal" class="panel active" role="tabpanel">
+      <div class="card fig-grid total-only">
+        <!-- 数字（1つだけ・センター） -->
+        <div class="big-number total-number">
+          <span id="totalLeftValue">–</span>
         </div>
-        <div class="note note-right">
-          <div>↑　　他の人に</div>
-          <div>⭐ᗪᕼ丅⭐と</div>
-          <div>言われた回数</div>
+
+        <!-- 数字の直下：センタリング文言（3行固定） -->
+        <div class="note-row total-note">
+          <div class="note note-center">
+            <div>↑</div>
+            <div>⭐ᗪᕼ丅⭐と</div>
+            <div>言われた回数</div>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-</main>
+    <!-- Total 2026 -->
+    <section id="tTotal2026" class="panel" role="tabpanel">
+      <div class="card fig-grid total-only">
+        <!-- 数字（1つだけ・センター） -->
+        <div class="big-number total-number">
+          <span id="total2026Value">–</span>
+        </div>
 
+        <!-- 数字の直下：センタリング文言（3行固定） -->
+        <div class="note-row total-note">
+          <div class="note note-center">
+            <div>↑</div>
+            <div>⭐ᗪᕼ丅⭐と</div>
+            <div>言われた回数</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Graph 2026 -->
+    <section id="tGraph2026" class="panel" role="tabpanel">
+      <div class="card">
+        <div class="chart-wrap">
+          <canvas id="cumChart"></canvas>
+        </div>
+
+        <!-- もし .desc のCSSが無いなら style.css に追加が必要 -->
+        <div class="desc">
+          <div>横軸：2026-01-01 を 1日目とした日数</div>
+          <div>縦軸：累積回数</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- History 2026 -->
+    <section id="tHistory2026" class="panel" role="tabpanel">
+      <div class="card">
+        <div class="pager">
+          <button id="histPrev" class="pager-btn" type="button" aria-label="prev">◀</button>
+          <div id="histPageInfo" class="pager-info">–</div>
+          <button id="histNext" class="pager-btn" type="button" aria-label="next">▶</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="hist-table">
+            <thead>
+              <tr>
+                <th class="col-date">日付</th>
+                <th class="col-name">発言者</th>
+                <th class="col-url">リンク</th>
+              </tr>
+            </thead>
+            <tbody id="histBody">
+              <tr><td colspan="3" class="hist-empty">読み込み中…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Fig 2025 -->
+    <section id="tFig2025" class="panel" role="tabpanel">
+      <div class="card fig-grid">
+        <div class="big-number">
+          <span id="fig2025LeftValue">–</span>
+          <span class="dash"> − </span>
+          <span id="fig2025RightValue">–</span>
+        </div>
+
+        <div class="note-row">
+          <div class="note note-left">
+            <div>Cさんに　　↑</div>
+            <div>⭐ᗪᕼ丅⭐と</div>
+            <div>言われた回数</div>
+          </div>
+          <div class="note note-right">
+            <div>↑　　他の人に</div>
+            <div>⭐ᗪᕼ丅⭐と</div>
+            <div>言われた回数</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
 
   <!-- boot marker -->
   <script>
@@ -137,15 +155,6 @@
   <script src="js/config.js?v=57"></script>
   <script src="js/api.js?v=57"></script>
   <script src="js/main.js?v=57"></script>
-
-  <!--
-<script>
-  document.body.insertAdjacentHTML(
-    'afterbegin',
-    '<div style="position:fixed;left:8px;top:8px;z-index:9999;background:#000;color:#0f0;padding:6px 8px;border-radius:6px;font:12px monospace;">INLINE JS OK</div>'
-  );
-</script>
--->
 
 </body>
 </html>
