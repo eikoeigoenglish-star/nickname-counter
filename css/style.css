@@ -408,3 +408,25 @@ body{
 #tTotal .note div {
   line-height: 1.4;
 }
+
+/* Total 2026 の中央数字を大きく */
+#tTotal2026 .big-number {
+  font-size: 6rem;       /* ← 好みに応じて 5〜7rem で調整可 */
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.1;
+}
+
+/* Total 2026 の注釈を中央寄せ */
+#tTotal2026 .note-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+#tTotal2026 .note {
+  text-align: center;
+  line-height: 1.4;
+  font-size: 1.1rem;
+}
+
