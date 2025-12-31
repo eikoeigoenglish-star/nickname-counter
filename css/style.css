@@ -393,3 +393,18 @@ body{
   width: 100%;
 }
 
+/* Total Since 2025 の説明文を中央寄せ */
+#tTotal .note-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+#tTotal .note {
+  text-align: center;
+  align-items: center;
+}
+
+#tTotal .note div {
+  line-height: 1.4;
+}
