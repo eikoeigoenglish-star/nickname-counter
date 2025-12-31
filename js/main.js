@@ -8,9 +8,11 @@
 
   const $ = (id) => document.getElementById(id);
 
+  // meta が無い構成でも気づけるように console へも出す
   const setMeta = (msg) => {
     const el = $('meta');
     if (el) el.textContent = msg;
+    console.log('[meta]', msg);
   };
 
   // 文字のブレ対策（全角スペースも潰す）
@@ -57,10 +59,33 @@
     return Math.floor(ms / 86400000) + 1; // 1日目始まり
   };
 
-  // 0→目的値へアニメ（要素ID指定）
+  // 0→目的値へアニメ（1値）
+  const animate1 = (to, id, durationMs = 900) => {
+    const el = $(id);
+    if (!el) return;
+
+    const T = Math.max(0, Number(to) || 0);
+    const start = performance.now();
+    const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+
+    const render = (v) => { el.textContent = String(v); };
+
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const k = easeOut(t);
+      render(Math.round(T * k));
+      if (t < 1) requestAnimationFrame(step);
+      else render(T);
+    };
+
+    render(0);
+    requestAnimationFrame(step);
+  };
+
+  // 0→目的値へアニメ（2値）
   const animate2 = (leftTo, rightTo, leftId, rightId, durationMs = 900) => {
-    const leftValueEl = $(leftId);
-    const rightValueEl = $(rightId);
+    const leftEl = $(leftId);
+    const rightEl = $(rightId);
 
     const L = Math.max(0, Number(leftTo) || 0);
     const R = Math.max(0, Number(rightTo) || 0);
@@ -69,16 +94,14 @@
     const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 
     const render = (l, r) => {
-      if (leftValueEl) leftValueEl.textContent = String(l);
-      if (rightValueEl) rightValueEl.textContent = String(r);
+      if (leftEl) leftEl.textContent = String(l);
+      if (rightEl) rightEl.textContent = String(r);
     };
 
     const step = (now) => {
       const t = Math.min(1, (now - start) / durationMs);
       const k = easeOut(t);
-      const l = Math.round(L * k);
-      const r = Math.round(R * k);
-      render(l, r);
+      render(Math.round(L * k), Math.round(R * k));
       if (t < 1) requestAnimationFrame(step);
       else render(L, R);
     };
@@ -87,70 +110,67 @@
     requestAnimationFrame(step);
   };
 
+  // users の和集合（途中追加ユーザーを落とさない）
+  const mergedUsers = (usersFromApi) => {
+    const cfgUsers = Array.isArray(window.APP_CONFIG?.USERS) ? window.APP_CONFIG.USERS : [];
+    const apiUsers = Array.isArray(usersFromApi) ? usersFromApi : [];
+    return Array.from(new Set([...apiUsers, ...cfgUsers])).map(norm).filter(Boolean);
+  };
+
   // Fig（Cさん vs Others）をレンジ指定で描画
   const renderFig = (events, usersFromApi, from, to, leftId, rightId) => {
-  const cfgUsers = Array.isArray(window.APP_CONFIG?.USERS) ? window.APP_CONFIG.USERS : [];
-  const apiUsers = Array.isArray(usersFromApi) ? usersFromApi : [];
+    const users = mergedUsers(usersFromApi);
+    const primary = 'Cさん';
+    const allow = new Set(users.length ? users : [primary]);
 
-  // ★ API優先ではなく「和集合」にする
-  const users = Array.from(new Set([...apiUsers, ...cfgUsers]))
-    .map(norm)
-    .filter(Boolean);
+    let cCount = 0;
+    let othersCount = 0;
 
-  const primary = 'Cさん';
-  const allow = new Set(users.length ? users : [primary]);
+    for (const e of events || []) {
+      const name = norm(e?.name);
+      const date = String(e?.date || '');
+      if (!name) continue;
+      if (allow.size && !allow.has(name)) continue;
+      if (!inRange(date, from, to)) continue;
 
-  let cCount = 0;
-  let othersCount = 0;
+      if (name === primary) cCount++;
+      else othersCount++;
+    }
 
-  for (const e of events || []) {
-    const name = norm(e?.name);
-    const date = String(e?.date || '');
-    if (!name) continue;
-    if (allow.size && !allow.has(name)) continue;
-    if (!inRange(date, from, to)) continue;
+    animate2(cCount, othersCount, leftId, rightId, 900);
+  };
 
-    if (name === primary) cCount++;
-    else othersCount++;
-  }
+  // Total（全員合計）をレンジ指定で描画（Total Since 2025 用）
+  const renderTotalAll = (events, usersFromApi, from, to, valueId) => {
+    const users = mergedUsers(usersFromApi);
+    const allow = new Set(users); // USERS管理を尊重
 
-  // Total（全員合計）をレンジ指定で描画
-const renderTotalAll = (events, usersFromApi, from, to, valueId) => {
-  const cfgUsers = Array.isArray(window.APP_CONFIG?.USERS) ? window.APP_CONFIG.USERS : [];
-  const apiUsers = Array.isArray(usersFromApi) ? usersFromApi : [];
+    let total = 0;
+    for (const e of events || []) {
+      const name = norm(e?.name);
+      const date = String(e?.date || '');
+      if (!name) continue;
+      if (allow.size && !allow.has(name)) continue;
+      if (!inRange(date, from, to)) continue;
+      total++;
+    }
 
-  // 和集合（途中追加ユーザーを落とさない）
-  const users = Array.from(new Set([...apiUsers, ...cfgUsers]))
-    .map(norm)
-    .filter(Boolean);
+    // 左だけ更新（右はそのまま）
+    animate1(total, valueId, 900);
 
-  const allow = new Set(users); // 空なら全通しにしてもいいが、今はUSERS管理を尊重
-
-  let total = 0;
-  for (const e of events || []) {
-    const name = norm(e?.name);
-    const date = String(e?.date || '');
-    if (!name) continue;
-    if (allow.size && !allow.has(name)) continue;
-    if (!inRange(date, from, to)) continue;
-    total++;
-  }
-
-  // 右側は触らない（–のまま）。左側だけカウントアップ表示
-  animate2(total, 0, valueId, '___dummy___', 900);
-};
-
-
-  animate2(cCount, othersCount, leftId, rightId, 900);
-};
-
+    // 右側を空にしたい場合（HTMLに totalRightValue がある前提）
+    const right = $('totalRightValue');
+    if (right) right.textContent = ' ';
+  };
 
   // Graph 2026：累積折れ線（2026年だけ）
   let chart = null;
-  const renderTabGraph2026 = (events) => {
+  const renderTabGraph2026 = (events, usersFromApi) => {
     const cfg = window.APP_CONFIG || {};
     const BASE_DATE = cfg.BASE_DATE || '2026-01-01';
-    const USERS = Array.isArray(cfg.USERS) ? cfg.USERS.map(norm).filter(Boolean) : [];
+
+    // グラフも和集合にする（途中追加が描ける）
+    const USERS = mergedUsers(usersFromApi);
 
     const canvas = $('cumChart');
     if (!canvas || typeof Chart === 'undefined') return;
@@ -164,7 +184,6 @@ const renderTotalAll = (events, usersFromApi, from, to, valueId) => {
       const name = norm(e?.name);
       const date = String(e?.date || '');
 
-      // 2026だけ
       if (!inRange(date, '2026-01-01', '2026-12-31')) continue;
 
       const day = daysSince(BASE_DATE, date);
@@ -178,16 +197,17 @@ const renderTotalAll = (events, usersFromApi, from, to, valueId) => {
     const last = Math.max(1, maxDay);
     for (let d = 1; d <= last; d++) dayNums.push(d);
 
+    // 色は “見分け” 優先（あなたのキー名に合わせて）
     const COLOR_MAP = {
-      'Cさん': '#ff6b8a',     // pink
-      'Sさん': '#4aa3ff',     // blue
-      'Hさん': '#ffa94d',     // orange
-      'Yさん': '#ffd43b',     // yellow
-      'Aさん': '#63e6be',     // teal
-      'Dさん': '#9775fa',     // purple
-      'Syさん': '#ced4da', // gray
-      '予備さん': '#74c0fc', // light blue（Cさんと被らない）
-      'ゲストさん': '#ff8787' // red-pink（Sさんと被らない）
+      'Cさん': '#ff6b8a',
+      'Sさん': '#4aa3ff',
+      'Hさん': '#ffa94d',
+      'Yさん': '#ffd43b',
+      'Aさん': '#63e6be',
+      'Dさん': '#9775fa',
+      '予備1さん': '#ced4da',
+      '予備2さん': '#74c0fc',
+      'ゲストさん': '#ff8787'
     };
 
     const datasets = USERS.map((u) => {
@@ -211,7 +231,6 @@ const renderTotalAll = (events, usersFromApi, from, to, valueId) => {
       };
     });
 
-
     if (chart) { chart.destroy(); chart = null; }
 
     chart = new Chart(canvas.getContext('2d'), {
@@ -227,93 +246,89 @@ const renderTotalAll = (events, usersFromApi, from, to, valueId) => {
   };
 
   // History 2026：日付降順テーブル + 10件ページング
-let histRows = [];
-let histPage = 1;
-const HIST_PAGE_SIZE = 10;
+  let histRows = [];
+  let histPage = 1;
+  const HIST_PAGE_SIZE = 10;
 
-const isValidHttpUrl = (s) => {
-  try {
-    const u = new URL(String(s || ''));
-    return u.protocol === 'http:' || u.protocol === 'https:';
-  } catch {
-    return false;
-  }
-};
-
-const buildHistoryRows2026 = (events, usersFromApi) => {
-  const cfgUsers = Array.isArray(window.APP_CONFIG?.USERS) ? window.APP_CONFIG.USERS : [];
-  const users = (Array.isArray(usersFromApi) && usersFromApi.length ? usersFromApi : cfgUsers)
-    .map(norm)
-    .filter(Boolean);
-  const allow = new Set(users);
-
-  const rows = [];
-  for (const e of events || []) {
-    const name = norm(e?.name);
-    const date = String(e?.date || '');
-    const url  = String(e?.url || '');
-
-    if (!name || !date) continue;
-    if (allow.size && !allow.has(name)) continue;
-    if (!inRange(date, '2026-01-01', '2026-12-31')) continue;
-
-    rows.push({ date, name, url });
-  }
-
-  // 日付降順（同日なら name 昇順で安定化）
-  rows.sort((a, b) => (b.date.localeCompare(a.date) || a.name.localeCompare(b.name)));
-  return rows;
-};
-
-const renderHistoryPage = () => {
-  const body = $('histBody');
-  const prevBtn = $('histPrev');
-  const nextBtn = $('histNext');
-  const info = $('histPageInfo');
-
-  if (!body || !prevBtn || !nextBtn || !info) return;
-
-  const total = histRows.length;
-  const totalPages = Math.max(1, Math.ceil(total / HIST_PAGE_SIZE));
-  histPage = Math.min(Math.max(1, histPage), totalPages);
-
-  const start = (histPage - 1) * HIST_PAGE_SIZE;
-  const pageRows = histRows.slice(start, start + HIST_PAGE_SIZE);
-
-  body.innerHTML = '';
-
-  if (!pageRows.length) {
-    body.innerHTML = `<tr><td colspan="3" class="hist-empty">データなし</td></tr>`;
-  } else {
-    for (const r of pageRows) {
-      const urlCell = r.url
-        ? (isValidHttpUrl(r.url)
-            ? `<a href="${r.url}" target="_blank" rel="noopener noreferrer">open</a>`
-            : `<span>${r.url}</span>`)
-        : `<span></span>`;
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${r.date}</td>
-        <td>${r.name}</td>
-        <td class="col-url">${urlCell}</td>
-      `;
-      body.appendChild(tr);
+  const isValidHttpUrl = (s) => {
+    try {
+      const u = new URL(String(s || ''));
+      return u.protocol === 'http:' || u.protocol === 'https:';
+    } catch {
+      return false;
     }
-  }
+  };
 
-  info.textContent = `${histPage} / ${totalPages}（${total}件）`;
-  prevBtn.disabled = histPage <= 1;
-  nextBtn.disabled = histPage >= totalPages;
-};
+  const buildHistoryRows2026 = (events, usersFromApi) => {
+    const users = mergedUsers(usersFromApi);
+    const allow = new Set(users);
 
-const initHistoryPager = () => {
-  const prevBtn = $('histPrev');
-  const nextBtn = $('histNext');
-  if (prevBtn) prevBtn.addEventListener('click', () => { histPage--; renderHistoryPage(); });
-  if (nextBtn) nextBtn.addEventListener('click', () => { histPage++; renderHistoryPage(); });
-};
+    const rows = [];
+    for (const e of events || []) {
+      const name = norm(e?.name);
+      const date = String(e?.date || '');
+      const url  = String(e?.url || '');
 
+      if (!name || !date) continue;
+      if (allow.size && !allow.has(name)) continue;
+      if (!inRange(date, '2026-01-01', '2026-12-31')) continue;
+
+      rows.push({ date, name, url });
+    }
+
+    rows.sort((a, b) => (b.date.localeCompare(a.date) || a.name.localeCompare(b.name)));
+    return rows;
+  };
+
+  const renderHistoryPage = () => {
+    const body = $('histBody');
+    const prevBtn = $('histPrev');
+    const nextBtn = $('histNext');
+    const info = $('histPageInfo');
+
+    if (!body || !prevBtn || !nextBtn || !info) return;
+
+    const total = histRows.length;
+    const totalPages = Math.max(1, Math.ceil(total / HIST_PAGE_SIZE));
+    histPage = Math.min(Math.max(1, histPage), totalPages);
+
+    const start = (histPage - 1) * HIST_PAGE_SIZE;
+    const pageRows = histRows.slice(start, start + HIST_PAGE_SIZE);
+
+    body.innerHTML = '';
+
+    if (!pageRows.length) {
+      body.innerHTML = `<tr><td colspan="3" class="hist-empty">データなし</td></tr>`;
+    } else {
+      for (const r of pageRows) {
+        const linkText = 'open'; // カラム名を「リンク」にしたいならHTML側の見出しだけ変える
+        const urlCell = r.url
+          ? (isValidHttpUrl(r.url)
+              ? `<a href="${r.url}" target="_blank" rel="noopener noreferrer">${linkText}</a>`
+              : `<span>${r.url}</span>`)
+          : `<span></span>`;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.date}</td>
+          <td>${r.name}</td>
+          <td class="col-url">${urlCell}</td>
+        `;
+        body.appendChild(tr);
+      }
+    }
+
+    info.textContent = `${histPage} / ${totalPages}（${total}件）`;
+    prevBtn.disabled = histPage <= 1;
+    nextBtn.disabled = histPage >= totalPages;
+  };
+
+  const initHistoryPager = () => {
+    const prevBtn = $('histPrev');
+    const nextBtn = $('histNext');
+    if (prevBtn) prevBtn.addEventListener('click', () => { histPage--; renderHistoryPage(); });
+    if (nextBtn) nextBtn.addEventListener('click', () => { histPage++; renderHistoryPage(); });
+  };
 
   // main.js 内蔵JSONP（api.js が無い場合の保険）
   const fetchJsonpLocal = (url, timeoutMs = 12000) =>
@@ -377,24 +392,22 @@ const initHistoryPager = () => {
 
     const events = Array.isArray(payload.events) ? payload.events : [];
 
-    // Total Since 2025（2025-01-01以降）
-    // Total Since 2025（2025-01-01以降）※全員合計
+    // Total Since 2025：全員合計（左だけ使う）
     renderTotalAll(events, payload.users, '2025-01-01', null, 'totalLeftValue');
 
-    // Fig 2026（2026年だけ）
+    // Fig 2026：Cさん vs Others
     renderFig(events, payload.users, '2026-01-01', '2026-12-31', 'fig2026LeftValue', 'fig2026RightValue');
 
-    // Graph 2026（2026年だけ）
-    renderTabGraph2026(events);
+    // Graph 2026：和集合 users で描画
+    renderTabGraph2026(events, payload.users);
 
-    // Fig 2025（2025年だけ）
+    // Fig 2025：Cさん vs Others
     renderFig(events, payload.users, '2025-01-01', '2025-12-31', 'fig2025LeftValue', 'fig2025RightValue');
 
     // History 2026
     histRows = buildHistoryRows2026(events, payload.users);
     histPage = 1;
     renderHistoryPage();
-
   };
 
   if (document.readyState === 'loading') {
