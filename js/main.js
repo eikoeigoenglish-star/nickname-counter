@@ -331,7 +331,7 @@
   };
 
   // main.js 内蔵JSONP（api.js が無い場合の保険）
-  const fetchJsonpLocal = (url, timeoutMs = 12000) =>
+  const fetchJsonpLocal = (url, timeoutMs = 30000) =>
     new Promise((resolve, reject) => {
       const cbName = `__cb_${Date.now()}_${Math.random().toString(16).slice(2)}`;
       const sep = url.includes('?') ? '&' : '?';
