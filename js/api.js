@@ -1,45 +1,81 @@
-window.__mark && window.__mark('api.js');
-window.__mark && window.__mark('api.js');
+/* api.js */
+(() => {
+  'use strict';
 
-function buildUrlWithParams(baseUrl, params) {
-  const u = new URL(baseUrl);
-  Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, String(v)));
-  return u.toString();
-}
+  // JSONP: timeout + retry + late-response guard
+  // - timeout: デフォルト30秒
+  // - retry: デフォルト2回（計3回トライ）
+  // - timeout後も callback を少し残して ReferenceError を防ぐ
+  const fetchJsonp = (url, opts = {}) => {
+    const timeoutMs = Number(opts.timeoutMs ?? 30000);
+    const retries = Number(opts.retries ?? 2);
 
-function fetchJsonp(baseUrl, timeoutMs = 10000) {
-  return new Promise((resolve, reject) => {
-    const cbName = '__jsonp_cb_' + Math.random().toString(36).slice(2);
-    const done = (err, data) => {
-      cleanup();
-      if (err) reject(err);
-      else resolve(data);
-    };
+    const attempt = (tryNo) =>
+      new Promise((resolve, reject) => {
+        const cbName = `__jsonp_cb_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+        const sep = url.includes('?') ? '&' : '?';
+        const src = `${url}${sep}callback=${encodeURIComponent(cbName)}&_=${Date.now()}`;
 
-    const cleanup = () => {
-      clearTimeout(timer);
-      try { delete window[cbName]; } catch (_) {}
-      if (script && script.parentNode) script.parentNode.removeChild(script);
-    };
+        let done = false;
+        let script = null;
 
-    window[cbName] = (data) => done(null, data);
+        const cleanup = () => {
+          if (script && script.parentNode) script.parentNode.removeChild(script);
+          script = null;
+        };
 
-    // ★ キャッシュ回避：t=現在時刻 を必ず付ける
-    const url = buildUrlWithParams(baseUrl, {
-      callback: cbName,
-      t: Date.now()
-    });
+        // timeout後に late response が来ても ReferenceError にしないためのガード
+        const keepNoopCallbackFor = 60000; // 60秒
+        const armNoop = () => {
+          try {
+            // 「消す」のではなく「noop」にして、遅延レスポンスを無害化
+            window[cbName] = () => {};
+            setTimeout(() => {
+              try { delete window[cbName]; } catch {}
+            }, keepNoopCallbackFor);
+          } catch {}
+        };
 
-    let script = document.createElement('script');
-    script.src = url;
-    script.async = true;
-    script.onerror = () => done(new Error('JSONP load error: ' + url));
+        const timer = setTimeout(() => {
+          if (done) return;
+          done = true;
+          cleanup();
+          armNoop();
+          reject(new Error(`JSONP timeout (${timeoutMs}ms)`));
+        }, timeoutMs);
 
-    const timer = setTimeout(() => {
-      done(new Error('JSONP timeout: ' + url));
-    }, timeoutMs);
+        window[cbName] = (data) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          cleanup();
+          try { delete window[cbName]; } catch {}
+          resolve(data);
+        };
 
-    document.head.appendChild(script);
-  });
-}
+        script = document.createElement('script');
+        script.src = src;
+        script.async = true;
 
+        script.onerror = () => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          cleanup();
+          armNoop();
+          reject(new Error('JSONP load error'));
+        };
+
+        document.head.appendChild(script);
+      }).catch((e) => {
+        if (tryNo >= retries) throw e;
+        // ちょい待ってリトライ（指数バックオフっぽく）
+        const wait = 300 * (tryNo + 1);
+        return new Promise((r) => setTimeout(r, wait)).then(() => attempt(tryNo + 1));
+      });
+
+    return attempt(0);
+  };
+
+  window.fetchJsonp = fetchJsonp;
+})();
