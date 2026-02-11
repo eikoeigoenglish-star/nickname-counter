@@ -51,12 +51,13 @@
     return isNaN(d.getTime()) ? null : d;
   };
 
-  const daysSince = (baseDateStr, dateStr) => {
+  // 2026-01-01 を 1日目… だったが、グラフ要件で 0日目を作るために「差分日数(0始まり)」も用意
+  const daysDiff0 = (baseDateStr, dateStr) => {
     const base = parseISODate(baseDateStr);
     const d = parseISODate(dateStr);
     if (!base || !d) return null;
     const ms = d.getTime() - base.getTime();
-    return Math.floor(ms / 86400000) + 1; // 1日目始まり（グラフ0始まりにするならここを調整）
+    return Math.floor(ms / 86400000); // 0日目始まり
   };
 
   // 0→目的値へアニメ（1値）
@@ -110,11 +111,6 @@
     requestAnimationFrame(step);
   };
 
-  const clearTextIfExists = (id, value = ' ') => {
-    const el = $(id);
-    if (el) el.textContent = value;
-  };
-
   // users の和集合（途中追加ユーザーを落とさない）
   const mergedUsers = (usersFromApi) => {
     const cfgUsers = Array.isArray(window.APP_CONFIG?.USERS) ? window.APP_CONFIG.USERS : [];
@@ -145,7 +141,7 @@
     animate2(cCount, othersCount, leftId, rightId, 900);
   };
 
-  // Total（全員合計）をレンジ指定で描画（単一値・センター表示前提）
+  // Total（全員合計）をレンジ指定で描画（Total Since 2025 / Total 2026 用）
   const renderTotalAll = (events, usersFromApi, from, to, valueId) => {
     const users = mergedUsers(usersFromApi);
     const allow = new Set(users); // USERS管理を尊重
@@ -163,39 +159,40 @@
     animate1(total, valueId, 900);
   };
 
-  // Graph 2026：累積折れ線（2026年だけ）
+  // Graph 2026：累積折れ線（2026年だけ / x軸は 0 から）
   let chart = null;
   const renderTabGraph2026 = (events, usersFromApi) => {
     const cfg = window.APP_CONFIG || {};
     const BASE_DATE = cfg.BASE_DATE || '2026-01-01';
 
-    // グラフも和集合にする（途中追加が描ける）
     const USERS = mergedUsers(usersFromApi);
-
     const canvas = $('cumChart');
     if (!canvas || typeof Chart === 'undefined') return;
 
-    const dayNums = [];
     const byUserDay = new Map();
     for (const u of USERS) byUserDay.set(u, new Map());
 
-    let maxDay = 0;
+    let maxDay = 0; // 0始まりの最大日数
     for (const e of events || []) {
       const name = norm(e?.name);
       const date = String(e?.date || '');
 
       if (!inRange(date, '2026-01-01', '2026-12-31')) continue;
 
-      const day = daysSince(BASE_DATE, date);
-      if (!byUserDay.has(name) || day == null) continue;
+      const day0 = daysDiff0(BASE_DATE, date);
+      if (day0 == null) continue;
+      if (!byUserDay.has(name)) continue;
 
       const m = byUserDay.get(name);
-      m.set(day, (m.get(day) || 0) + 1);
-      if (day > maxDay) maxDay = day;
+      // day0=0 は「2026-01-01」。そこもカウントに含める（要件：0は全員0にしたい → 後で配列の先頭を 0 に固定する）
+      m.set(day0, (m.get(day0) || 0) + 1);
+      if (day0 > maxDay) maxDay = day0;
     }
 
-    const last = Math.max(1, maxDay);
-    for (let d = 1; d <= last; d++) dayNums.push(d);
+    // 0日目を必ず含める（全員0固定にするため、labelsは 0..maxDay）
+    const last = Math.max(0, maxDay);
+    const dayNums = [];
+    for (let d = 0; d <= last; d++) dayNums.push(d);
 
     const COLOR_MAP = {
       'Cさん': '#ff6b8a',
@@ -204,15 +201,17 @@
       'Yさん': '#ffd43b',
       'Aさん': '#63e6be',
       'Dさん': '#9775fa',
-      'Syさん': '#ced4da',
-      'Mさん': '#74c0fc',
+      'Mさん': '#ced4da',
       'ゲストさん': '#ff8787'
     };
 
     const datasets = USERS.map((u) => {
       const m = byUserDay.get(u) || new Map();
+
+      // day=0 は必ず 0 に固定（要件）
       let cum = 0;
       const data = dayNums.map((d) => {
+        if (d === 0) return 0;
         cum += (m.get(d) || 0);
         return cum;
       });
@@ -329,47 +328,66 @@
     if (nextBtn) nextBtn.addEventListener('click', () => { histPage++; renderHistoryPage(); });
   };
 
-  // ==============================
-  // JSONP（安定版）
-  // - timeout後に callback を delete すると、遅延到着で ReferenceError が出る
-  // - timeout後もしばらく no-op を残して落ちないようにする
-  // ==============================
-  const fetchJsonpStable = (url, timeoutMs = 90000, keepCallbackMs = 120000) =>
+  /* ------------------------------
+     JSONP loader (安定版)
+     - timeout 後に callback を消さず no-op にして ReferenceError を防止
+     - リトライ + localStorage fallback
+  ------------------------------ */
+
+  const LS_KEY = 'rin_counter_last_payload_v1';
+
+  const saveLastPayload = (payload) => {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(payload)); } catch {}
+  };
+  const loadLastPayload = () => {
+    try {
+      const s = localStorage.getItem(LS_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const fetchJsonpLocal = (url, timeoutMs = 30000) =>
     new Promise((resolve, reject) => {
-      const cbName = `__jsonp_cb_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+      const cbName = `__jsonp_cb_${Date.now().toString(36)}${Math.random().toString(16).slice(2)}`;
       const sep = url.includes('?') ? '&' : '?';
       const src = `${url}${sep}callback=${encodeURIComponent(cbName)}&_=${Date.now()}`;
 
       let done = false;
       let script = null;
 
-      const safeCleanup = () => {
+      const cleanupScript = () => {
         if (script && script.parentNode) script.parentNode.removeChild(script);
         script = null;
       };
 
-      const makeNoopThenDeleteLater = () => {
-        // 遅延到着の __jsonp_cb_xxx(...) で落ちないよう no-op を残す
-        window[cbName] = () => {};
-        setTimeout(() => {
-          try { delete window[cbName]; } catch {}
-        }, keepCallbackMs);
+      // callback を「消す」のではなく「遅延着弾を握りつぶす no-op」にする
+      const setNoopCb = () => {
+        try { window[cbName] = () => {}; } catch {}
       };
 
       const timer = setTimeout(() => {
         if (done) return;
         done = true;
-        safeCleanup();
-        makeNoopThenDeleteLater();
+
+        // ここがポイント：遅延で script が来ても ReferenceError にしない
+        setNoopCb();
+        cleanupScript();
+
         reject(new Error('JSONP timeout'));
-      }, timeoutMs);
+      }, Math.max(1000, Number(timeoutMs) || 30000));
 
       window[cbName] = (data) => {
         if (done) return;
         done = true;
+
         clearTimeout(timer);
-        safeCleanup();
-        try { delete window[cbName]; } catch {}
+        cleanupScript();
+
+        // 成功時は callback を no-op に寄せておく（再実行などの安全策）
+        setNoopCb();
+
         resolve(data);
       };
 
@@ -380,48 +398,84 @@
       script.onerror = () => {
         if (done) return;
         done = true;
+
         clearTimeout(timer);
-        safeCleanup();
-        makeNoopThenDeleteLater();
+        setNoopCb();
+        cleanupScript();
+
         reject(new Error('JSONP load error'));
       };
 
       document.head.appendChild(script);
     });
 
-  // 1回だけ軽くリトライ（GASの瞬断/遅延に強く）
-  const loadData = async () => {
+  // データ取得（api.js の fetchJsonp があればそれを使うが、失敗時は local 方式にフォールバック）
+  const loadDataOnce = async () => {
     const cfg = window.APP_CONFIG || {};
-    const API_URL = cfg.GAS_API_EXEC_URL;
+    const API_URL = cfg.GAS_API_EXEC_URL || cfg.API_URL || cfg.GAS_URL;
     if (!API_URL) throw new Error('GAS_API_EXEC_URL is missing');
 
-    const timeoutMs = Number(cfg.JSONP_TIMEOUT_MS) || 90000;
+    // timeout は config で上書きできるように
+    const timeoutMs = Number(cfg.JSONP_TIMEOUT_MS || 30000);
 
-    try {
-      return await fetchJsonpStable(API_URL, timeoutMs);
-    } catch (e1) {
-      // すぐ再試行（キャッシュバスターは fetchJsonpStable 側で付与してる）
-      return await fetchJsonpStable(API_URL, timeoutMs);
+    if (typeof window.fetchJsonp === 'function') {
+      // 既存 api.js がある場合
+      return await window.fetchJsonp(API_URL);
     }
+    return await fetchJsonpLocal(API_URL, timeoutMs);
+  };
+
+  // リトライ + localStorage fallback
+  const loadData = async () => {
+    const cfg = window.APP_CONFIG || {};
+    const tries = Math.max(1, Number(cfg.JSONP_RETRY || 3)); // 既定3回
+    const backoffBase = Math.max(200, Number(cfg.JSONP_BACKOFF_MS || 600));
+
+    let lastErr = null;
+    for (let i = 0; i < tries; i++) {
+      try {
+        const payload = await loadDataOnce();
+        if (payload && payload.ok === true) {
+          saveLastPayload(payload);
+          return payload;
+        }
+        throw new Error('payload not ok');
+      } catch (e) {
+        lastErr = e;
+        // 次があるなら少し待つ
+        if (i < tries - 1) {
+          const wait = backoffBase * Math.pow(2, i); // 600ms, 1200ms, 2400ms...
+          await new Promise((r) => setTimeout(r, wait));
+        }
+      }
+    }
+
+    // ここまで失敗したら最後の payload を出す（表示を落とさない）
+    const cached = loadLastPayload();
+    if (cached && cached.ok === true) {
+      setMeta(`API失敗のためキャッシュ表示: ${lastErr?.message || String(lastErr)}`);
+      return cached;
+    }
+
+    throw lastErr || new Error('loadData failed');
   };
 
   const main = async () => {
     initTabs();
     initHistoryPager();
 
+    // 取得（リトライ＋キャッシュ）
     const payload = await loadData();
-    if (!payload || payload.ok !== true) throw new Error('payload not ok');
 
     const events = Array.isArray(payload.events) ? payload.events : [];
 
-    // Total Since 2025：全員合計（中央1値）
+    // Total Since 2025：全員合計
     renderTotalAll(events, payload.users, '2025-01-01', null, 'totalLeftValue');
-    clearTextIfExists('totalRightValue', ' ');
 
-    // Total 2026：2026年だけの全員合計（中央1値）
+    // Total 2026：2026年だけ（全員合計）
     renderTotalAll(events, payload.users, '2026-01-01', '2026-12-31', 'total2026Value');
 
-    // Graph 2026
+    // Graph 2026：x=0 から
     renderTabGraph2026(events, payload.users);
 
     // Fig 2025：Cさん vs Others
@@ -432,9 +486,7 @@
     histPage = 1;
     renderHistoryPage();
 
-    // 旧 Fig 2026 のIDが残ってても事故らないように空に（保険）
-    clearTextIfExists('fig2026LeftValue', ' ');
-    clearTextIfExists('fig2026RightValue', ' ');
+    setMeta('OK');
   };
 
   if (document.readyState === 'loading') {
