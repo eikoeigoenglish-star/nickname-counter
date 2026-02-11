@@ -56,7 +56,7 @@
     const d = parseISODate(dateStr);
     if (!base || !d) return null;
     const ms = d.getTime() - base.getTime();
-    return Math.floor(ms / 86400000) + 1; // 1日目始まり
+    return Math.floor(ms / 86400000) + 1; // 1日目始まり（グラフ0始まりにするならここを調整）
   };
 
   // 0→目的値へアニメ（1値）
@@ -197,7 +197,6 @@
     const last = Math.max(1, maxDay);
     for (let d = 1; d <= last; d++) dayNums.push(d);
 
-    // 色は “見分け” 優先（あなたのキー名に合わせて）
     const COLOR_MAP = {
       'Cさん': '#ff6b8a',
       'Sさん': '#4aa3ff',
@@ -330,23 +329,38 @@
     if (nextBtn) nextBtn.addEventListener('click', () => { histPage++; renderHistoryPage(); });
   };
 
-  // main.js 内蔵JSONP（api.js が無い場合の保険）
-  const fetchJsonpLocal = (url, timeoutMs = 90000) =>
+  // ==============================
+  // JSONP（安定版）
+  // - timeout後に callback を delete すると、遅延到着で ReferenceError が出る
+  // - timeout後もしばらく no-op を残して落ちないようにする
+  // ==============================
+  const fetchJsonpStable = (url, timeoutMs = 90000, keepCallbackMs = 120000) =>
     new Promise((resolve, reject) => {
-      const cbName = `__cb_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+      const cbName = `__jsonp_cb_${Date.now()}_${Math.random().toString(16).slice(2)}`;
       const sep = url.includes('?') ? '&' : '?';
       const src = `${url}${sep}callback=${encodeURIComponent(cbName)}&_=${Date.now()}`;
 
       let done = false;
-      const cleanup = () => {
-        try { delete window[cbName]; } catch {}
+      let script = null;
+
+      const safeCleanup = () => {
         if (script && script.parentNode) script.parentNode.removeChild(script);
+        script = null;
+      };
+
+      const makeNoopThenDeleteLater = () => {
+        // 遅延到着の __jsonp_cb_xxx(...) で落ちないよう no-op を残す
+        window[cbName] = () => {};
+        setTimeout(() => {
+          try { delete window[cbName]; } catch {}
+        }, keepCallbackMs);
       };
 
       const timer = setTimeout(() => {
         if (done) return;
         done = true;
-        cleanup();
+        safeCleanup();
+        makeNoopThenDeleteLater();
         reject(new Error('JSONP timeout'));
       }, timeoutMs);
 
@@ -354,33 +368,41 @@
         if (done) return;
         done = true;
         clearTimeout(timer);
-        cleanup();
+        safeCleanup();
+        try { delete window[cbName]; } catch {}
         resolve(data);
       };
 
-      const script = document.createElement('script');
+      script = document.createElement('script');
       script.src = src;
       script.async = true;
+
       script.onerror = () => {
         if (done) return;
         done = true;
         clearTimeout(timer);
-        cleanup();
+        safeCleanup();
+        makeNoopThenDeleteLater();
         reject(new Error('JSONP load error'));
       };
+
       document.head.appendChild(script);
     });
 
-  // データ取得（api.js の fetchJsonp があればそれを使う）
+  // 1回だけ軽くリトライ（GASの瞬断/遅延に強く）
   const loadData = async () => {
     const cfg = window.APP_CONFIG || {};
     const API_URL = cfg.GAS_API_EXEC_URL;
     if (!API_URL) throw new Error('GAS_API_EXEC_URL is missing');
 
-    if (typeof window.fetchJsonp === 'function') {
-      return await window.fetchJsonp(API_URL);
+    const timeoutMs = Number(cfg.JSONP_TIMEOUT_MS) || 90000;
+
+    try {
+      return await fetchJsonpStable(API_URL, timeoutMs);
+    } catch (e1) {
+      // すぐ再試行（キャッシュバスターは fetchJsonpStable 側で付与してる）
+      return await fetchJsonpStable(API_URL, timeoutMs);
     }
-    return await fetchJsonpLocal(API_URL);
   };
 
   const main = async () => {
@@ -392,21 +414,17 @@
 
     const events = Array.isArray(payload.events) ? payload.events : [];
 
-    // ===== ここから “仕様変更” 反映 =====
-
     // Total Since 2025：全員合計（中央1値）
-    // ※ HTML側が totalLeftValue 1つならOK。残ってる右側は念のため空に。
     renderTotalAll(events, payload.users, '2025-01-01', null, 'totalLeftValue');
     clearTextIfExists('totalRightValue', ' ');
 
-    // Total 2026（旧 Fig 2026）：2026年だけの全員合計（中央1値）
-    // ※ HTML側：<span id="total2026Value">–</span> を想定
+    // Total 2026：2026年だけの全員合計（中央1値）
     renderTotalAll(events, payload.users, '2026-01-01', '2026-12-31', 'total2026Value');
 
-    // Graph 2026：和集合 users で描画
+    // Graph 2026
     renderTabGraph2026(events, payload.users);
 
-    // Fig 2025：Cさん vs Others（ここは左右のまま）
+    // Fig 2025：Cさん vs Others
     renderFig(events, payload.users, '2025-01-01', '2025-12-31', 'fig2025LeftValue', 'fig2025RightValue');
 
     // History 2026
@@ -417,8 +435,6 @@
     // 旧 Fig 2026 のIDが残ってても事故らないように空に（保険）
     clearTextIfExists('fig2026LeftValue', ' ');
     clearTextIfExists('fig2026RightValue', ' ');
-
-    // ===== 仕様変更ここまで =====
   };
 
   if (document.readyState === 'loading') {
