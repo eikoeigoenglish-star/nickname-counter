@@ -23,6 +23,21 @@
   // boot marker (optional)
   try { window.__mark && window.__mark('main.js'); } catch {}
 
+  // ===== 固定カラーマップ（Graph 2026 用）=====
+  const USER_COLORS = {
+    'Cさん': '#4aa3ff',      // blue
+    'Sさん': '#ff6b8a',      // pink
+    'Hさん': '#ffa94d',      // orange
+    'Yさん': '#ffd43b',      // yellow
+    'Aさん': '#63e6be',      // teal
+    'Dさん': '#9775fa',      // purple
+    'Syさん': '#ced4da',     // gray
+    'Mさん': '#74c0fc',      // light blue（Cさんと被らない）
+    'ゲストさん': '#ff8787'   // red-pink（Sさんと被らない）
+  };
+
+  const getUserColor = (name) => USER_COLORS[name] || '#ffffff';
+
   // ===== helpers =====
   const $ = (sel) => document.querySelector(sel);
 
@@ -376,11 +391,23 @@
         cum += (m.get(d) || 0);
         return cum;
       });
+
+      const color = getUserColor(u);
+
       return {
         label: u,
         data,
         tension: 0.2,
         fill: false,
+
+        // ★ここが追加：色の固定
+        borderColor: color,
+        backgroundColor: color,
+        pointBackgroundColor: color,
+        pointBorderColor: color,
+        borderWidth: 2,
+        pointRadius: 2,
+        pointHoverRadius: 4,
       };
     });
 
