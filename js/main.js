@@ -25,8 +25,8 @@
 
   // ===== 固定カラーマップ（Graph 2026 用）=====
   const USER_COLORS = {
-    'Cさん': '#4aa3ff',      // blue
-    'Sさん': '#ff6b8a',      // pink
+    'Cさん': '#ff6b8a',      // blue
+    'Sさん': '#4aa3ff',      // pink
     'Hさん': '#ffa94d',      // orange
     'Yさん': '#ffd43b',      // yellow
     'Aさん': '#63e6be',      // teal
