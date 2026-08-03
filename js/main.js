@@ -1,551 +1,366 @@
-/* main.js
-   - JSONPでGAS(WebApp)から payload を取得して描画
-   - 2025年は「Cさん件数 / Cさん以外件数」だけを保持する前提に対応
-   - 2026年はイベント明細(events)を使って Graph/History/Total を生成
-
-   payload 想定（後方互換）:
-   {
-     ok: true,
-     updatedAt: '2026-02-11',
-     users: ['Cさん','Sさん',...],
-     events: [ { name:'Cさん', date:'2026-02-11', url:'...' }, ... ], // 2026のみ
-     // 2025集計（どれかが入っていればOK）
-     fig2025: { c: 601, others: 604 }
-     // or summary2025: { c: 601, others: 604, total:1205 }
-     // totals（入っていれば優先）
-     totals: { since2025: 1602, y2026: 397 }
-   }
-*/
-
 (() => {
   'use strict';
 
-  // boot marker (optional)
-  try { window.__mark && window.__mark('main.js'); } catch {}
+  const config = window.APP_CONFIG || {};
+  const api = window.DhtApi;
 
-  // ===== 固定カラーマップ（Graph 2026 用）=====
-  const USER_COLORS = {
-    'Cさん': '#ff6b8a',      // blue
-    'Sさん': '#4aa3ff',      // pink
-    'Hさん': '#ffa94d',      // orange
-    'Yさん': '#ffd43b',      // yellow
-    'Aさん': '#63e6be',      // teal
-    'Dさん': '#9775fa',      // purple
-    'Syさん': '#ced4da',     // gray
-    'Mさん': '#74c0fc',      // light blue（Cさんと被らない）
-    'ゲストさん': '#ff8787'   // red-pink（Sさんと被らない）
+  const state = {
+    summary: null,
+    activeTab: 'total',
+    chart: null,
+    chartRendered: false,
+    historyLoaded: false,
+    historyLoading: false,
+    historyPage: 1,
+    historyPageCount: 1,
   };
 
-  const getUserColor = (name) => USER_COLORS[name] || '#ffffff';
+  const elements = {};
 
-  // ===== helpers =====
-  const $ = (sel) => document.querySelector(sel);
+  function cacheElements() {
+    elements.status = document.getElementById('status');
+    elements.tabs = Array.from(document.querySelectorAll('[data-tab]'));
+    elements.panels = Array.from(document.querySelectorAll('[data-panel]'));
 
-  const setMeta = (msg) => {
-    const el = document.getElementById('meta');
-    if (el) el.textContent = msg;
-  };
+    elements.yearTotalTab = document.getElementById('yearTotalTab');
+    elements.graphTab = document.getElementById('graphTab');
+    elements.historyTab = document.getElementById('historyTab');
 
-  const clearTextIfExists = (id, text = '') => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = text;
-  };
+    elements.totalValue = document.getElementById('totalValue');
+    elements.yearTotalValue = document.getElementById('yearTotalValue');
+    elements.fig2025CValue = document.getElementById('fig2025CValue');
+    elements.fig2025OthersValue = document.getElementById('fig2025OthersValue');
 
-  const renderNumberTo = (id, value) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = Number.isFinite(value) ? String(value) : '–';
-  };
+    elements.graphDescription = document.getElementById('graphDescription');
+    elements.chartCanvas = document.getElementById('cumulativeChart');
 
-  const toInt = (x) => {
-    const n = Number(x);
-    return Number.isFinite(n) ? Math.trunc(n) : 0;
-  };
+    elements.historyPrev = document.getElementById('historyPrev');
+    elements.historyNext = document.getElementById('historyNext');
+    elements.historyPageInfo = document.getElementById('historyPageInfo');
+    elements.historyBody = document.getElementById('historyBody');
+  }
 
-  // ===== date utils =====
-  const parseDate = (s) => {
-    // 'YYYY/MM/DD' or 'YYYY-MM-DD' or Date object
-    if (!s) return null;
-    if (s instanceof Date) return isNaN(+s) ? null : s;
-    const str = String(s).trim();
-    if (!str) return null;
+  function setStatus(message, isError = false) {
+    elements.status.textContent = message || '';
+    elements.status.classList.toggle('is-error', isError);
+  }
 
-    const m = str.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
-    if (!m) return null;
-    const y = Number(m[1]);
-    const mo = Number(m[2]);
-    const d = Number(m[3]);
-    const dt = new Date(Date.UTC(y, mo - 1, d));
-    return isNaN(+dt) ? null : dt;
-  };
+  function renderNumber(element, value) {
+    element.textContent = Number.isFinite(Number(value)) ? String(Math.trunc(Number(value))) : '–';
+  }
 
-  const toISODate = (dt) => {
-    if (!dt) return '';
-    const y = dt.getUTCFullYear();
-    const m = String(dt.getUTCMonth() + 1).padStart(2, '0');
-    const d = String(dt.getUTCDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  };
+  function initTabs() {
+    elements.tabs.forEach((button) => {
+      button.addEventListener('click', () => activateTab(button.dataset.tab));
+    });
+  }
 
-  const inRange = (dt, startISO, endISO) => {
-    if (!dt) return false;
-    const t = dt.getTime();
-    if (startISO) {
-      const s = parseDate(startISO);
-      if (s && t < s.getTime()) return false;
-    }
-    if (endISO) {
-      const e = parseDate(endISO);
-      if (e && t > e.getTime()) return false;
-    }
-    return true;
-  };
+  function activateTab(tabName) {
+    state.activeTab = tabName;
 
-  // BASE_DATE (default: 2026-01-01)
-  const getBaseDateISO = () => {
-    const cfg = window.APP_CONFIG || {};
-    const base = cfg.BASE_DATE ? String(cfg.BASE_DATE) : '2026-01-01';
-    // sanitize
-    const dt = parseDate(base);
-    return dt ? toISODate(dt) : '2026-01-01';
-  };
+    elements.tabs.forEach((button) => {
+      const isActive = button.dataset.tab === tabName;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-selected', String(isActive));
+    });
 
-  // 2026-01-01(=BASE_DATE) からの経過日数（1始まり）
-  const dayIndexFromBase1 = (dt) => {
-    const baseISO = getBaseDateISO();
-    const baseDt = parseDate(baseISO);
-    if (!baseDt) return 1;
+    elements.panels.forEach((panel) => {
+      panel.hidden = panel.dataset.panel !== tabName;
+    });
 
-    const base = Date.UTC(baseDt.getUTCFullYear(), baseDt.getUTCMonth(), baseDt.getUTCDate());
-    const t = Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate());
-    const diff = Math.floor((t - base) / 86400000);
-    return diff + 1; // ★ 1日目開始
-  };
+    if (!state.summary) return;
 
-  // ===== payload normalize / absorb =====
-  const normalizePayload = (payload) => {
-    const p = payload ?? {};
+    if (tabName === 'graph') renderChartOnce();
+    if (tabName === 'history' && !state.historyLoaded) loadHistory(1);
+  }
+
+  function updateYearLabels(year) {
+    elements.yearTotalTab.textContent = `Total ${year}`;
+    elements.graphTab.textContent = `Graph ${year}`;
+    elements.historyTab.textContent = `History ${year}`;
+  }
+
+  function renderSummary(summary) {
+    renderNumber(elements.totalValue, summary.totals && summary.totals.since2025);
+    renderNumber(elements.yearTotalValue, summary.totals && summary.totals.activeYear);
+    renderNumber(elements.fig2025CValue, summary.fig2025 && summary.fig2025.c);
+    renderNumber(elements.fig2025OthersValue, summary.fig2025 && summary.fig2025.others);
+
+    updateYearLabels(summary.activeYear);
+    elements.graphDescription.textContent =
+      `横軸：${summary.activeYear}-01-01を1日目とした日数　／　縦軸：累積回数`;
+
+    const lastDate = summary.lastEventDate || '記録なし';
+    setStatus(`最終記録：${lastDate}`);
+  }
+
+  function parseIsoDateParts(value) {
+    const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return null;
+
     return {
-      ok: p.ok === true,
-      updatedAt: p.updatedAt ?? null,
-      users: Array.isArray(p.users) ? p.users : [],
-      events: Array.isArray(p.events) ? p.events : [],
-      fig2025: p.fig2025 ?? null,
-      summary2025: p.summary2025 ?? null,
-      totals: p.totals ?? null,
+      year: Number(match[1]),
+      month: Number(match[2]),
+      day: Number(match[3]),
     };
-  };
+  }
 
-  const getFig2025Counts = (p) => {
-    // priority: fig2025 -> summary2025
-    const f = (p && p.fig2025 && typeof p.fig2025 === 'object') ? p.fig2025
-            : (p && p.summary2025 && typeof p.summary2025 === 'object') ? p.summary2025
-            : null;
-    if (!f) return null;
+  function dayOfYear(value) {
+    const parts = parseIsoDateParts(value);
+    if (!parts) return null;
 
-    const c =
-      Number.isFinite(Number(f.c)) ? Number(f.c) :
-      Number.isFinite(Number(f.cCount)) ? Number(f.cCount) :
-      Number.isFinite(Number(f.left)) ? Number(f.left) :
-      null;
+    const start = Date.UTC(parts.year, 0, 1);
+    const current = Date.UTC(parts.year, parts.month - 1, parts.day);
+    return Math.floor((current - start) / 86400000) + 1;
+  }
 
-    const others =
-      Number.isFinite(Number(f.others)) ? Number(f.others) :
-      Number.isFinite(Number(f.otherCount)) ? Number(f.otherCount) :
-      Number.isFinite(Number(f.right)) ? Number(f.right) :
-      null;
-
-    if (c == null || others == null) return null;
-    return { c: toInt(c), others: toInt(others) };
-  };
-
-  const getTotalsIfAny = (p) => {
-    const t = p && p.totals && typeof p.totals === 'object' ? p.totals : null;
-    if (!t) return null;
-    const since2025 = Number(t.since2025);
-    const y2026 = Number(t.y2026);
-    return {
-      since2025: Number.isFinite(since2025) ? Math.trunc(since2025) : null,
-      y2026: Number.isFinite(y2026) ? Math.trunc(y2026) : null,
-    };
-  };
-
-  // ===== aggregation =====
-  const countEvents = (events, users, startISO, endISO) => {
-    const userSet = new Set((users || []).map(String));
-    let n = 0;
-    for (const ev of events) {
-      const name = ev && ev.name != null ? String(ev.name) : '';
-      if (!name) continue;
-      if (userSet.size && !userSet.has(name)) continue;
-
-      const dt = parseDate(ev.date);
-      if (!dt) continue;
-
-      if (!inRange(dt, startISO, endISO)) continue;
-      n++;
+  function fallbackColor(name) {
+    let hash = 0;
+    for (const char of String(name)) {
+      hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
     }
-    return n;
-  };
+    return `hsl(${Math.abs(hash) % 360} 72% 68%)`;
+  }
 
-  const countEventsYear = (events, users, year) =>
-    countEvents(events, users, `${year}-01-01`, `${year}-12-31`);
+  function userColor(name) {
+    const colors = config.USER_COLORS || {};
+    return colors[name] || fallbackColor(name);
+  }
 
-  const calcTotalSince2025 = (p) => {
-    // 1) payload.totals.since2025 があれば最優先
-    const totals = getTotalsIfAny(p);
-    if (totals && totals.since2025 != null) return totals.since2025;
-
-    // 2) 2025集計( fig2025 or summary2025 ) + 2026明細件数
-    const fig = getFig2025Counts(p);
-    const n2026 = countEventsYear(p.events, p.users, 2026);
-
-    if (fig) return fig.c + fig.others + n2026;
-
-    // 3) 後方互換（2025明細が残ってる場合）
-    return countEvents(p.events, p.users, '2025-01-01', null);
-  };
-
-  const calcTotal2026 = (p) => {
-    const totals = getTotalsIfAny(p);
-    if (totals && totals.y2026 != null) return totals.y2026;
-    return countEventsYear(p.events, p.users, 2026);
-  };
-
-  const calcFig2025 = (p) => {
-    const fig = getFig2025Counts(p);
-    if (fig) return fig;
-
-    // 後方互換：2025明細が events にある場合に算出
-    const users = p.users || [];
-    const userSet = new Set((users || []).map(String));
-    let c = 0;
-    let others = 0;
-
-    for (const ev of p.events || []) {
-      const name = ev && ev.name != null ? String(ev.name) : '';
-      if (!name) continue;
-      if (userSet.size && !userSet.has(name)) continue;
-
-      const dt = parseDate(ev.date);
-      if (!dt) continue;
-      if (!inRange(dt, '2025-01-01', '2025-12-31')) continue;
-
-      if (name === 'Cさん') c++;
-      else others++;
-    }
-    return { c, others };
-  };
-
-  // ===== Tabs =====
-  const initTabs = () => {
-    const tabs = document.querySelectorAll('.tab');
-    const panels = document.querySelectorAll('.panel');
-
-    const activate = (tabId) => {
-      tabs.forEach((b) => b.classList.toggle('active', b.dataset.tab === tabId));
-      panels.forEach((p) => p.classList.toggle('active', p.id === tabId));
-    };
-
-    tabs.forEach((b) => {
-      b.addEventListener('click', () => {
-        try { activate(b.dataset.tab); } catch (e) { console.error('[tabs]', e); }
-      });
-    });
-  };
-
-  // ===== History pager =====
-  let histRows = [];
-  let histPage = 1;
-  const HIST_PAGE_SIZE = 50;
-
-  const buildHistoryRows2026 = (events, users) => {
-    const userSet = new Set((users || []).map(String));
-    const rows = [];
-
-    for (const ev of events) {
-      const name = ev && ev.name != null ? String(ev.name) : '';
-      if (!name) continue;
-      if (userSet.size && !userSet.has(name)) continue;
-
-      const dt = parseDate(ev.date);
-      if (!dt) continue;
-      if (!inRange(dt, '2026-01-01', '2026-12-31')) continue;
-
-      rows.push({
-        date: toISODate(dt),
-        name,
-        url: ev.url ? String(ev.url) : '',
-      });
-    }
-
-    rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-    return rows;
-  };
-
-  const renderHistoryPage = () => {
-    const body = document.getElementById('histBody');
-    const info = document.getElementById('histPageInfo');
-    const prev = document.getElementById('histPrev');
-    const next = document.getElementById('histNext');
-    if (!body || !info || !prev || !next) return;
-
-    const total = histRows.length;
-    const totalPages = Math.max(1, Math.ceil(total / HIST_PAGE_SIZE));
-    histPage = Math.min(Math.max(1, histPage), totalPages);
-
-    const start = (histPage - 1) * HIST_PAGE_SIZE;
-    const end = Math.min(start + HIST_PAGE_SIZE, total);
-    const slice = histRows.slice(start, end);
-
-    info.textContent = `${histPage} / ${totalPages}  (${total}件)`;
-    prev.disabled = histPage <= 1;
-    next.disabled = histPage >= totalPages;
-
-    body.innerHTML = '';
-    if (!slice.length) {
-      body.innerHTML = `<tr><td colspan="3" class="hist-empty">データなし</td></tr>`;
-      return;
-    }
-
-    const esc = (s) =>
-      String(s)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-
-    for (const r of slice) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="col-date">${esc(r.date)}</td>
-        <td class="col-name">${esc(r.name)}</td>
-        <td class="col-url">${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">link</a>` : ''}</td>
-      `;
-      body.appendChild(tr);
-    }
-  };
-
-  const initHistoryPager = () => {
-    const prev = document.getElementById('histPrev');
-    const next = document.getElementById('histNext');
-
-    if (prev) prev.addEventListener('click', () => {
-      try { histPage--; renderHistoryPage(); } catch (e) { console.error('[histPrev]', e); }
-    });
-
-    if (next) next.addEventListener('click', () => {
-      try { histPage++; renderHistoryPage(); } catch (e) { console.error('[histNext]', e); }
-    });
-  };
-
-  // ===== Graph 2026 (1日目開始) =====
-  let chartInstance = null;
-
-  const renderTabGraph2026 = (events, users) => {
-    const canvas = document.getElementById('cumChart');
-    if (!canvas || typeof Chart === 'undefined') return;
-
-    const userList = (users || []).map(String);
-    const userSet = new Set(userList);
-
-    // 2026のイベントだけ取り出す
-    const evs = [];
-    for (const ev of events) {
-      const name = ev && ev.name != null ? String(ev.name) : '';
-      if (!name) continue;
-      if (userSet.size && !userSet.has(name)) continue;
-
-      const dt = parseDate(ev.date);
-      if (!dt) continue;
-      if (!inRange(dt, '2026-01-01', '2026-12-31')) continue;
-
-      const di1 = dayIndexFromBase1(dt); // 1,2,3...
-      if (di1 <= 0) continue;
-
-      evs.push({ name, day: di1 });
-    }
-
+  function buildChartData(summary) {
+    const users = Array.isArray(summary.users) ? summary.users : [];
+    const daily = Array.isArray(summary.daily) ? summary.daily : [];
+    const countsByDay = new Map();
     let maxDay = 1;
-    for (const e of evs) if (e.day > maxDay) maxDay = e.day;
 
-    // labels: 1..maxDay（最低でも1を作る）
-    const labels = [];
-    for (let d = 1; d <= Math.max(1, maxDay); d++) labels.push(d);
+    daily.forEach((entry) => {
+      if (!Array.isArray(entry) || entry.length < 2) return;
+      const day = dayOfYear(entry[0]);
+      if (!day || day < 1) return;
 
-    // user -> day -> count
-    const counts = new Map();
-    for (const u of userList) counts.set(u, new Map());
+      countsByDay.set(day, Array.isArray(entry[1]) ? entry[1] : []);
+      if (day > maxDay) maxDay = day;
+    });
 
-    for (const e of evs) {
-      const m = counts.get(e.name);
-      if (!m) continue;
-      m.set(e.day, (m.get(e.day) || 0) + 1);
-    }
-
-    const datasets = userList.map((u) => {
-      const m = counts.get(u) || new Map();
-      let cum = 0;
-      const data = labels.map((d) => {
-        cum += (m.get(d) || 0);
-        return cum;
+    const labels = Array.from({ length: maxDay }, (_, index) => index + 1);
+    const datasets = users.map((name, userIndex) => {
+      let cumulative = 0;
+      const data = labels.map((day) => {
+        const counts = countsByDay.get(day) || [];
+        cumulative += Number(counts[userIndex]) || 0;
+        return cumulative;
       });
-
-      const color = getUserColor(u);
+      const color = userColor(name);
 
       return {
-        label: u,
+        label: name,
         data,
-        tension: 0.2,
-        fill: false,
-
-        // ★ここが追加：色の固定
         borderColor: color,
         backgroundColor: color,
         pointBackgroundColor: color,
         pointBorderColor: color,
         borderWidth: 2,
-        pointRadius: 2,
+        pointRadius: 1.5,
         pointHoverRadius: 4,
+        tension: 0.2,
+        fill: false,
       };
     });
 
-    if (chartInstance) {
-      chartInstance.destroy();
-      chartInstance = null;
+    return { labels, datasets };
+  }
+
+  function renderChartOnce() {
+    if (state.chartRendered) {
+      if (state.chart) state.chart.resize();
+      return;
     }
 
-    const baseISO = getBaseDateISO();
-    chartInstance = new Chart(canvas, {
+    if (!window.Chart) {
+      setStatus('グラフライブラリを読み込めませんでした', true);
+      return;
+    }
+
+    const chartData = buildChartData(state.summary);
+    state.chart = new window.Chart(elements.chartCanvas, {
       type: 'line',
-      data: { labels, datasets },
+      data: chartData,
       options: {
         responsive: true,
         maintainAspectRatio: false,
         interaction: { mode: 'nearest', intersect: false },
         plugins: {
-          legend: { position: 'top' },
+          legend: {
+            position: 'top',
+            labels: { color: 'rgba(255,255,255,.88)' },
+          },
           tooltip: { enabled: true },
         },
         scales: {
           x: {
-            title: { display: true, text: `${baseISO} を 1日目とした日数` },
-            ticks: { precision: 0 },
+            title: {
+              display: true,
+              text: `${state.summary.activeYear}-01-01を1日目とした日数`,
+              color: 'rgba(255,255,255,.76)',
+            },
+            ticks: {
+              color: 'rgba(255,255,255,.68)',
+              precision: 0,
+            },
+            grid: { color: 'rgba(255,255,255,.08)' },
           },
           y: {
-            title: { display: true, text: '累積回数' },
             beginAtZero: true,
-            ticks: { precision: 0 },
+            title: {
+              display: true,
+              text: '累積回数',
+              color: 'rgba(255,255,255,.76)',
+            },
+            ticks: {
+              color: 'rgba(255,255,255,.68)',
+              precision: 0,
+            },
+            grid: { color: 'rgba(255,255,255,.08)' },
           },
         },
       },
     });
-  };
 
-  // ===== JSONP fallback (api.js が無い/壊れてる時用) =====
-  const fetchJsonpLocal = (url, timeoutMs = 90000) => {
-    return new Promise((resolve, reject) => {
-      const cbName = `__jsonp_cb_${Math.random().toString(36).slice(2)}`;
-      const sep = url.includes('?') ? '&' : '?';
-      const full = `${url}${sep}callback=${encodeURIComponent(cbName)}&_=${Date.now()}`;
+    state.chartRendered = true;
+  }
 
-      let done = false;
+  function initHistoryPager() {
+    elements.historyPrev.disabled = true;
+    elements.historyNext.disabled = true;
 
-      const cleanup = () => {
-        const s = document.getElementById(cbName);
-        if (s && s.parentNode) s.parentNode.removeChild(s);
-        try { delete window[cbName]; } catch {}
-      };
-
-      const timer = setTimeout(() => {
-        if (done) return;
-        done = true;
-        cleanup();
-        reject(new Error('JSONP timeout'));
-      }, timeoutMs);
-
-      window[cbName] = (data) => {
-        if (done) return;
-        done = true;
-        clearTimeout(timer);
-        cleanup();
-        resolve(data);
-      };
-
-      const script = document.createElement('script');
-      script.id = cbName;
-      script.src = full;
-      script.async = true;
-      script.onerror = () => {
-        if (done) return;
-        done = true;
-        clearTimeout(timer);
-        cleanup();
-        reject(new Error('JSONP load error'));
-      };
-
-      document.head.appendChild(script);
+    elements.historyPrev.addEventListener('click', () => {
+      if (state.historyLoading || state.historyPage <= 1) return;
+      loadHistory(state.historyPage - 1);
     });
-  };
 
-  // ===== load / main =====
-  const loadData = async () => {
-    const cfg = window.APP_CONFIG || {};
-    const API_URL = cfg.GAS_API_EXEC_URL;
-    if (!API_URL) throw new Error('GAS_API_EXEC_URL is missing');
+    elements.historyNext.addEventListener('click', () => {
+      if (state.historyLoading || state.historyPage >= state.historyPageCount) return;
+      loadHistory(state.historyPage + 1);
+    });
+  }
 
-    // api.js の fetchJsonp を優先
-    if (typeof window.fetchJsonp === 'function') {
-      return await window.fetchJsonp(API_URL);
+  function setHistoryMessage(message) {
+    elements.historyBody.replaceChildren();
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = 3;
+    cell.className = 'empty-cell';
+    cell.textContent = message;
+    row.appendChild(cell);
+    elements.historyBody.appendChild(row);
+  }
+
+  function safeHttpUrl(value) {
+    try {
+      const url = new URL(String(value || ''));
+      return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : '';
+    } catch (_) {
+      return '';
     }
-    return await fetchJsonpLocal(API_URL);
-  };
+  }
 
-  const main = async () => {
+  function appendHistoryRow(event) {
+    const row = document.createElement('tr');
+    const dateCell = document.createElement('td');
+    const nameCell = document.createElement('td');
+    const urlCell = document.createElement('td');
+
+    dateCell.className = 'date-column';
+    nameCell.className = 'name-column';
+    dateCell.textContent = event.date || '';
+    nameCell.textContent = event.name || '';
+
+    const href = safeHttpUrl(event.url);
+    if (href) {
+      const link = document.createElement('a');
+      link.href = href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = 'link';
+      urlCell.appendChild(link);
+    }
+
+    row.append(dateCell, nameCell, urlCell);
+    elements.historyBody.appendChild(row);
+  }
+
+  function renderHistory(payload) {
+    state.historyPage = payload.page;
+    state.historyPageCount = payload.pageCount;
+    state.historyLoaded = true;
+
+    elements.historyPageInfo.textContent =
+      `${payload.page} / ${payload.pageCount}  (${payload.total}件)`;
+    elements.historyPrev.disabled = payload.page <= 1;
+    elements.historyNext.disabled = payload.page >= payload.pageCount;
+
+    elements.historyBody.replaceChildren();
+    const events = Array.isArray(payload.events) ? payload.events : [];
+
+    if (events.length === 0) {
+      setHistoryMessage('データなし');
+      return;
+    }
+
+    events.forEach(appendHistoryRow);
+  }
+
+  async function loadHistory(page) {
+    if (!state.summary || state.historyLoading) return;
+
+    state.historyLoading = true;
+    elements.historyPrev.disabled = true;
+    elements.historyNext.disabled = true;
+    elements.historyPageInfo.textContent = '読み込み中…';
+    setHistoryMessage('読み込み中…');
+
+    try {
+      const payload = await api.getHistory({
+        year: state.summary.activeYear,
+        page,
+        limit: Number(config.HISTORY_PAGE_SIZE) || 50,
+      });
+      renderHistory(payload);
+    } catch (error) {
+      state.historyLoaded = false;
+      elements.historyPageInfo.textContent = '–';
+      setHistoryMessage('履歴を読み込めませんでした');
+      setStatus(error.message || String(error), true);
+    } finally {
+      state.historyLoading = false;
+    }
+  }
+
+  async function boot() {
+    cacheElements();
     initTabs();
     initHistoryPager();
 
-    const raw = await loadData();
-    const payload = normalizePayload(raw);
-    if (!payload.ok) throw new Error('payload not ok');
+    if (!api) {
+      setStatus('api.jsを読み込めませんでした', true);
+      return;
+    }
 
-    // Total Since 2025
-    const totalSince = calcTotalSince2025(payload);
-    renderNumberTo('totalLeftValue', totalSince);
-    clearTextIfExists('totalRightValue', ' ');
+    try {
+      const summary = await api.getSummary();
+      state.summary = summary;
+      renderSummary(summary);
 
-    // Total 2026
-    const total2026 = calcTotal2026(payload);
-    renderNumberTo('total2026Value', total2026);
-
-    // Fig 2025
-    const fig = calcFig2025(payload);
-    renderNumberTo('fig2025LeftValue', fig.c);
-    renderNumberTo('fig2025RightValue', fig.others);
-
-    // Graph 2026 (1日目開始)
-    renderTabGraph2026(payload.events, payload.users);
-
-    // History 2026
-    histRows = buildHistoryRows2026(payload.events, payload.users);
-    histPage = 1;
-    renderHistoryPage();
-
-    // 旧IDが残ってても事故らないように（保険）
-    clearTextIfExists('fig2026LeftValue', ' ');
-    clearTextIfExists('fig2026RightValue', ' ');
-
-    setMeta(payload.updatedAt ? `updatedAt: ${payload.updatedAt}` : '');
-  };
-
-  const boot = () => main().catch((e) => {
-    console.error('[main] error:', e);
-    setMeta(`ERR: ${e?.message || String(e)}`);
-  });
+      if (state.activeTab === 'graph') renderChartOnce();
+      if (state.activeTab === 'history') loadHistory(1);
+    } catch (error) {
+      setStatus(error.message || String(error), true);
+      setHistoryMessage('データを読み込めませんでした');
+    }
+  }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot);
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
   } else {
     boot();
   }
