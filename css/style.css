@@ -1040,3 +1040,35 @@ body::before {
   }
   .confetti-layer { display: none; }
 }
+
+
+/* =========================================================
+   Total numbers: three random pop gradients
+   ranking-anim.js assigns one class per page load.
+   ========================================================= */
+.big-number.number-theme--sunset {
+  background: linear-gradient(180deg, #ff5f8f 0%, #ff7a4d 54%, #ffc53d 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 0 rgba(255, 255, 255, .95))
+          drop-shadow(0 14px 20px rgba(255, 95, 143, .25));
+}
+
+.big-number.number-theme--berry {
+  background: linear-gradient(180deg, #9b7bff 0%, #df59c7 48%, #ff725e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 0 rgba(255, 255, 255, .95))
+          drop-shadow(0 14px 20px rgba(223, 89, 199, .24));
+}
+
+.big-number.number-theme--carnival {
+  background: linear-gradient(180deg, #ff8a35 0%, #ff4f84 48%, #b266ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 0 rgba(255, 255, 255, .95))
+          drop-shadow(0 14px 20px rgba(255, 79, 132, .24));
+}
