@@ -1,363 +1,211 @@
 (() => {
   'use strict';
 
-  const config = window.APP_CONFIG || {};
   const api = window.DhtApi;
+  let snapshot = null;
+  let loadingPromise = null;
 
-  const state = {
-    summary: null,
-    activeTab: 'total',
-    chart: null,
-    chartRendered: false,
-    historyLoaded: false,
-    historyLoading: false,
-    historyPage: 1,
-    historyPageCount: 1,
+  const FIELD_SELECTORS = Object.freeze({
+    totalSince2025: ['#totalLeftValue', '[data-dht="total-since-2025"]'],
+    totalCurrentYear: ['#total2026Value', '[data-dht="total-current-year"]'],
+    year: ['[data-dht="year"]'],
+    fig2025C: ['#fig2025LeftValue', '[data-dht="fig-2025-c"]'],
+    fig2025Others: ['#fig2025RightValue', '[data-dht="fig-2025-others"]'],
+    fig2025Total: ['[data-dht="fig-2025-total"]'],
+    generatedAt: ['[data-dht="generated-at"]'],
+  });
+
+  const setTextForSelectors = (selectors, value) => {
+    selectors.forEach((selector) => {
+      document.querySelectorAll(selector).forEach((element) => {
+        element.textContent = String(value);
+      });
+    });
   };
 
-  const elements = {};
+  const setStatus = (message, isError = false) => {
+    const element = document.getElementById('meta')
+      || document.querySelector('[data-dht="status"]');
+    if (!element) return;
 
-  function cacheElements() {
-    elements.status = document.getElementById('status');
-    elements.tabs = Array.from(document.querySelectorAll('[data-tab]'));
-    elements.panels = Array.from(document.querySelectorAll('[data-panel]'));
+    element.textContent = message || '';
+    element.classList.toggle('error', isError);
+  };
 
-    elements.yearTotalTab = document.getElementById('yearTotalTab');
-    elements.graphTab = document.getElementById('graphTab');
-    elements.historyTab = document.getElementById('historyTab');
-
-    elements.totalValue = document.getElementById('totalValue');
-    elements.yearTotalValue = document.getElementById('yearTotalValue');
-    elements.fig2025CValue = document.getElementById('fig2025CValue');
-    elements.fig2025OthersValue = document.getElementById('fig2025OthersValue');
-
-    elements.graphDescription = document.getElementById('graphDescription');
-    elements.chartCanvas = document.getElementById('cumulativeChart');
-
-    elements.historyPrev = document.getElementById('historyPrev');
-    elements.historyNext = document.getElementById('historyNext');
-    elements.historyPageInfo = document.getElementById('historyPageInfo');
-    elements.historyBody = document.getElementById('historyBody');
-  }
-
-  function setStatus(message, isError = false) {
-    elements.status.textContent = message || '';
-    elements.status.classList.toggle('is-error', isError);
-  }
-
-  function renderNumber(element, value) {
-    element.textContent = Number.isFinite(Number(value)) ? String(Math.trunc(Number(value))) : '–';
-  }
-
-  function initTabs() {
-    elements.tabs.forEach((button) => {
-      button.addEventListener('click', () => activateTab(button.dataset.tab));
-    });
-  }
-
-  function activateTab(tabName) {
-    state.activeTab = tabName;
-
-    elements.tabs.forEach((button) => {
-      const isActive = button.dataset.tab === tabName;
-      button.classList.toggle('is-active', isActive);
-      button.setAttribute('aria-selected', String(isActive));
-    });
-
-    elements.panels.forEach((panel) => {
-      panel.hidden = panel.dataset.panel !== tabName;
-    });
-
-    if (!state.summary) return;
-
-    if (tabName === 'graph') renderChartOnce();
-    if (tabName === 'history' && !state.historyLoaded) loadHistory(1);
-  }
-
-  function updateYearLabels(year) {
-    elements.yearTotalTab.textContent = `Total ${year}`;
-    elements.graphTab.textContent = `Graph ${year}`;
-    elements.historyTab.textContent = `History ${year}`;
-  }
-
-  function renderSummary(summary) {
-    renderNumber(elements.totalValue, summary.totals && summary.totals.since2025);
-    renderNumber(elements.yearTotalValue, summary.totals && summary.totals.activeYear);
-    renderNumber(elements.fig2025CValue, summary.fig2025 && summary.fig2025.c);
-    renderNumber(elements.fig2025OthersValue, summary.fig2025 && summary.fig2025.others);
-
-    updateYearLabels(summary.activeYear);
-    elements.graphDescription.textContent =
-      `横軸：${summary.activeYear}-01-01を1日目とした日数　／　縦軸：累積回数`;
-
-    const lastDate = summary.lastEventDate || '記録なし';
-    setStatus(`最終記録：${lastDate}`);
-  }
-
-  function parseIsoDateParts(value) {
-    const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!match) return null;
-
-    return {
-      year: Number(match[1]),
-      month: Number(match[2]),
-      day: Number(match[3]),
-    };
-  }
-
-  function dayOfYear(value) {
-    const parts = parseIsoDateParts(value);
-    if (!parts) return null;
-
-    const start = Date.UTC(parts.year, 0, 1);
-    const current = Date.UTC(parts.year, parts.month - 1, parts.day);
-    return Math.floor((current - start) / 86400000) + 1;
-  }
-
-  function fallbackColor(name) {
-    let hash = 0;
-    for (const char of String(name)) {
-      hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
+  const toInteger = (value, fieldName) => {
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      throw new Error(`${fieldName}が数値ではありません`);
     }
-    return `hsl(${Math.abs(hash) % 360} 72% 68%)`;
-  }
+    return Math.trunc(number);
+  };
 
-  function userColor(name) {
-    const colors = config.USER_COLORS || {};
-    return colors[name] || fallbackColor(name);
-  }
+  const validateAndNormalize = (payload) => {
+    if (!payload || payload.ok !== true) {
+      throw new Error('APIの応答が不正です');
+    }
+    if (!payload.totals || !payload.fig2025 || !Array.isArray(payload.ranking)) {
+      throw new Error('GAS APIのデータ形式がフロント側と一致していません');
+    }
 
-  function buildChartData(summary) {
-    const users = Array.isArray(summary.users) ? summary.users : [];
-    const daily = Array.isArray(summary.daily) ? summary.daily : [];
-    const countsByDay = new Map();
-    let maxDay = 1;
+    const ranking = payload.ranking.map((entry, index) => {
+      if (!entry || !String(entry.name || '').trim()) {
+        throw new Error(`ranking[${index}]のnameが不正です`);
+      }
 
-    daily.forEach((entry) => {
-      if (!Array.isArray(entry) || entry.length < 2) return;
-      const day = dayOfYear(entry[0]);
-      if (!day || day < 1) return;
-
-      countsByDay.set(day, Array.isArray(entry[1]) ? entry[1] : []);
-      if (day > maxDay) maxDay = day;
-    });
-
-    const labels = Array.from({ length: maxDay }, (_, index) => index + 1);
-    const datasets = users.map((name, userIndex) => {
-      let cumulative = 0;
-      const data = labels.map((day) => {
-        const counts = countsByDay.get(day) || [];
-        cumulative += Number(counts[userIndex]) || 0;
-        return cumulative;
+      return Object.freeze({
+        position: toInteger(entry.position ?? index + 1, `ranking[${index}].position`),
+        rank: toInteger(entry.rank ?? index + 1, `ranking[${index}].rank`),
+        name: String(entry.name).trim(),
+        emoji: String(entry.emoji || '👤'),
+        count: toInteger(entry.count, `ranking[${index}].count`),
+        sharePct: Number(entry.sharePct) || 0,
+        gapFromLeader: toInteger(entry.gapFromLeader ?? 0, `ranking[${index}].gapFromLeader`),
+        isPodium: Boolean(entry.isPodium ?? index < 3),
       });
-      const color = userColor(name);
-
-      return {
-        label: name,
-        data,
-        borderColor: color,
-        backgroundColor: color,
-        pointBackgroundColor: color,
-        pointBorderColor: color,
-        borderWidth: 2,
-        pointRadius: 1.5,
-        pointHoverRadius: 4,
-        tension: 0.2,
-        fill: false,
-      };
     });
 
-    return { labels, datasets };
-  }
-
-  function renderChartOnce() {
-    if (state.chartRendered) {
-      if (state.chart) state.chart.resize();
-      return;
-    }
-
-    if (!window.Chart) {
-      setStatus('グラフライブラリを読み込めませんでした', true);
-      return;
-    }
-
-    const chartData = buildChartData(state.summary);
-    state.chart = new window.Chart(elements.chartCanvas, {
-      type: 'line',
-      data: chartData,
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'nearest', intersect: false },
-        plugins: {
-          legend: {
-            position: 'top',
-            labels: { color: 'rgba(255,255,255,.88)' },
-          },
-          tooltip: { enabled: true },
-        },
-        scales: {
-          x: {
-            title: {
-              display: true,
-              text: `${state.summary.activeYear}-01-01を1日目とした日数`,
-              color: 'rgba(255,255,255,.76)',
-            },
-            ticks: {
-              color: 'rgba(255,255,255,.68)',
-              precision: 0,
-            },
-            grid: { color: 'rgba(255,255,255,.08)' },
-          },
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: '累積回数',
-              color: 'rgba(255,255,255,.76)',
-            },
-            ticks: {
-              color: 'rgba(255,255,255,.68)',
-              precision: 0,
-            },
-            grid: { color: 'rgba(255,255,255,.08)' },
-          },
-        },
-      },
+    return Object.freeze({
+      schemaVersion: toInteger(payload.schemaVersion ?? 1, 'schemaVersion'),
+      generatedAt: String(payload.generatedAt || ''),
+      year: toInteger(payload.year, 'year'),
+      totals: Object.freeze({
+        since2025: toInteger(payload.totals.since2025, 'totals.since2025'),
+        currentYear: toInteger(
+          payload.totals.currentYear ?? payload.totals.y2026,
+          'totals.currentYear'
+        ),
+      }),
+      fig2025: Object.freeze({
+        c: toInteger(payload.fig2025.c, 'fig2025.c'),
+        others: toInteger(payload.fig2025.others, 'fig2025.others'),
+        total: toInteger(
+          payload.fig2025.total
+            ?? Number(payload.fig2025.c) + Number(payload.fig2025.others),
+          'fig2025.total'
+        ),
+      }),
+      ranking: Object.freeze(ranking),
+      podium: Object.freeze(ranking.slice(0, 3)),
+      others: Object.freeze(ranking.slice(3)),
     });
+  };
 
-    state.chartRendered = true;
-  }
+  const createRankItem = (entry, variant) => {
+    const item = document.createElement('article');
+    item.className = `dht-rank-item dht-rank-item--${variant}`;
+    item.dataset.position = String(entry.position);
+    item.dataset.rank = String(entry.rank);
+    item.dataset.name = entry.name;
+    item.dataset.count = String(entry.count);
 
-  function initHistoryPager() {
-    elements.historyPrev.disabled = true;
-    elements.historyNext.disabled = true;
+    const rank = document.createElement('span');
+    rank.className = 'dht-rank-number';
+    rank.textContent = `${entry.rank}位`;
 
-    elements.historyPrev.addEventListener('click', () => {
-      if (state.historyLoading || state.historyPage <= 1) return;
-      loadHistory(state.historyPage - 1);
-    });
+    const emoji = document.createElement('span');
+    emoji.className = 'dht-rank-emoji';
+    emoji.textContent = entry.emoji;
+    emoji.setAttribute('aria-hidden', 'true');
 
-    elements.historyNext.addEventListener('click', () => {
-      if (state.historyLoading || state.historyPage >= state.historyPageCount) return;
-      loadHistory(state.historyPage + 1);
-    });
-  }
+    const name = document.createElement('span');
+    name.className = 'dht-rank-name';
+    name.textContent = entry.name;
 
-  function setHistoryMessage(message) {
-    elements.historyBody.replaceChildren();
-    const row = document.createElement('tr');
-    const cell = document.createElement('td');
-    cell.colSpan = 3;
-    cell.className = 'empty-cell';
-    cell.textContent = message;
-    row.appendChild(cell);
-    elements.historyBody.appendChild(row);
-  }
+    const count = document.createElement('span');
+    count.className = 'dht-rank-count';
+    count.textContent = `${entry.count}回`;
 
-  function safeHttpUrl(value) {
-    try {
-      const url = new URL(String(value || ''));
-      return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : '';
-    } catch (_) {
-      return '';
-    }
-  }
+    const share = document.createElement('span');
+    share.className = 'dht-rank-share';
+    share.textContent = `${entry.sharePct}%`;
 
-  function appendHistoryRow(event) {
-    const row = document.createElement('tr');
-    const dateCell = document.createElement('td');
-    const nameCell = document.createElement('td');
-    const urlCell = document.createElement('td');
+    item.append(rank, emoji, name, count, share);
+    return item;
+  };
 
-    dateCell.className = 'date-column';
-    nameCell.className = 'name-column';
-    dateCell.textContent = event.date || '';
-    nameCell.textContent = event.name || '';
-
-    const href = safeHttpUrl(event.url);
-    if (href) {
-      const link = document.createElement('a');
-      link.href = href;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.textContent = 'link';
-      urlCell.appendChild(link);
+  /**
+   * Claude側が独自描画を行わない場合だけ使われる、最低限のDOM描画です。
+   * CSS・アニメーションは一切含みません。
+   */
+  const renderRankingFallback = (data) => {
+    const podium = document.getElementById('rankingPodium');
+    if (podium) {
+      podium.replaceChildren(...data.podium.map((entry) => createRankItem(entry, 'podium')));
     }
 
-    row.append(dateCell, nameCell, urlCell);
-    elements.historyBody.appendChild(row);
-  }
+    const list = document.getElementById('rankingList');
+    if (list) {
+      const entries = podium ? data.others : data.ranking;
+      list.replaceChildren(...entries.map((entry) => createRankItem(entry, 'list')));
+    }
+  };
 
-  function renderHistory(payload) {
-    state.historyPage = payload.page;
-    state.historyPageCount = payload.pageCount;
-    state.historyLoaded = true;
+  const renderScalars = (data) => {
+    setTextForSelectors(FIELD_SELECTORS.totalSince2025, data.totals.since2025);
+    setTextForSelectors(FIELD_SELECTORS.totalCurrentYear, data.totals.currentYear);
+    setTextForSelectors(FIELD_SELECTORS.year, data.year);
+    setTextForSelectors(FIELD_SELECTORS.fig2025C, data.fig2025.c);
+    setTextForSelectors(FIELD_SELECTORS.fig2025Others, data.fig2025.others);
+    setTextForSelectors(FIELD_SELECTORS.fig2025Total, data.fig2025.total);
+    setTextForSelectors(FIELD_SELECTORS.generatedAt, data.generatedAt);
+  };
 
-    elements.historyPageInfo.textContent =
-      `${payload.page} / ${payload.pageCount}  (${payload.total}件)`;
-    elements.historyPrev.disabled = payload.page <= 1;
-    elements.historyNext.disabled = payload.page >= payload.pageCount;
+  const render = (data) => {
+    renderScalars(data);
+    renderRankingFallback(data);
+    setStatus('');
+  };
 
-    elements.historyBody.replaceChildren();
-    const events = Array.isArray(payload.events) ? payload.events : [];
+  const dispatch = (name, detail) => {
+    document.dispatchEvent(new CustomEvent(name, { detail }));
+  };
 
-    if (events.length === 0) {
-      setHistoryMessage('データなし');
-      return;
+  const load = async ({ force = false } = {}) => {
+    if (snapshot && !force) return snapshot;
+    if (loadingPromise && !force) return loadingPromise;
+
+    if (!api || typeof api.getSummary !== 'function') {
+      const error = new Error('api.jsを読み込めませんでした');
+      setStatus(error.message, true);
+      dispatch('dht:error', { error });
+      throw error;
     }
 
-    events.forEach(appendHistoryRow);
-  }
+    setStatus('読み込み中…');
 
-  async function loadHistory(page) {
-    if (!state.summary || state.historyLoading) return;
-
-    state.historyLoading = true;
-    elements.historyPrev.disabled = true;
-    elements.historyNext.disabled = true;
-    elements.historyPageInfo.textContent = '読み込み中…';
-    setHistoryMessage('読み込み中…');
-
-    try {
-      const payload = await api.getHistory({
-        year: state.summary.activeYear,
-        page,
-        limit: Number(config.HISTORY_PAGE_SIZE) || 50,
+    loadingPromise = api.getSummary()
+      .then(validateAndNormalize)
+      .then((data) => {
+        snapshot = data;
+        render(data);
+        dispatch('dht:ready', data);
+        return data;
+      })
+      .catch((error) => {
+        console.error('[DhtCounter]', error);
+        setStatus(error && error.message ? error.message : String(error), true);
+        dispatch('dht:error', { error });
+        throw error;
+      })
+      .finally(() => {
+        loadingPromise = null;
       });
-      renderHistory(payload);
-    } catch (error) {
-      state.historyLoaded = false;
-      elements.historyPageInfo.textContent = '–';
-      setHistoryMessage('履歴を読み込めませんでした');
-      setStatus(error.message || String(error), true);
-    } finally {
-      state.historyLoading = false;
-    }
-  }
 
-  async function boot() {
-    cacheElements();
-    initTabs();
-    initHistoryPager();
+    return loadingPromise;
+  };
 
-    if (!api) {
-      setStatus('api.jsを読み込めませんでした', true);
-      return;
-    }
+  window.DhtCounter = Object.freeze({
+    load,
+    render,
+    getSnapshot: () => snapshot,
+  });
 
-    try {
-      const summary = await api.getSummary();
-      state.summary = summary;
-      renderSummary(summary);
-
-      if (state.activeTab === 'graph') renderChartOnce();
-      if (state.activeTab === 'history') loadHistory(1);
-    } catch (error) {
-      setStatus(error.message || String(error), true);
-      setHistoryMessage('データを読み込めませんでした');
-    }
-  }
+  const boot = () => {
+    load().catch(() => {
+      // エラー表示とイベント通知はload内で実施済みです。
+    });
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot, { once: true });
