@@ -1,133 +1,88 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>リンさんカウンター</title>
 
-  <link rel="stylesheet" href="./css/style.css?v=1">
-
-  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-  <script defer src="./js/config.js?v=1"></script>
-  <script defer src="./js/api.js?v=1"></script>
-  <script defer src="./js/main.js?v=1"></script>
+  <!-- デザインとアニメーションはClaude側で追加・置換してください -->
+  <link rel="stylesheet" href="./css/style.css" />
 </head>
 <body>
   <header class="header">
     <h1 class="title">リンさんカウンター</h1>
-    <p id="status" class="status" role="status" aria-live="polite">読み込み中…</p>
+    <div id="meta" class="meta" data-dht="status" aria-live="polite"></div>
   </header>
 
-  <nav class="tabs" aria-label="表示切り替え" role="tablist">
-    <button class="tab is-active" type="button" role="tab"
-      aria-selected="true" aria-controls="panel-total" data-tab="total">
-      Total Since 2025
-    </button>
-    <button id="yearTotalTab" class="tab" type="button" role="tab"
-      aria-selected="false" aria-controls="panel-year-total" data-tab="year-total">
-      Total
-    </button>
-    <button id="graphTab" class="tab" type="button" role="tab"
-      aria-selected="false" aria-controls="panel-graph" data-tab="graph">
-      Graph
-    </button>
-    <button id="historyTab" class="tab" type="button" role="tab"
-      aria-selected="false" aria-controls="panel-history" data-tab="history">
-      History
-    </button>
-    <button class="tab" type="button" role="tab"
-      aria-selected="false" aria-controls="panel-fig-2025" data-tab="fig-2025">
-      Fig 2025
-    </button>
+  <nav class="tabs" aria-label="表示切り替え">
+    <button type="button" class="tab active" data-tab="tTotal">Total Since 2025</button>
+    <button type="button" class="tab" data-tab="tTotal2026">Total 2026</button>
+    <button type="button" class="tab" data-tab="tRanking2026">Ranking 2026</button>
+    <button type="button" class="tab" data-tab="tFig2025">Fig 2025</button>
   </nav>
 
   <main class="content">
-    <section id="panel-total" class="panel" role="tabpanel" data-panel="total">
-      <div class="card total-card">
-        <div id="totalValue" class="big-number">–</div>
-        <div class="counter-caption">
-          <div class="arrow">↑</div>
-          <div>⭐ᗪᕼ丅⭐と</div>
-          <div>言われた回数</div>
-        </div>
-      </div>
-    </section>
-
-    <section id="panel-year-total" class="panel" role="tabpanel"
-      data-panel="year-total" hidden>
-      <div class="card total-card">
-        <div id="yearTotalValue" class="big-number">–</div>
-        <div class="counter-caption">
-          <div class="arrow">↑</div>
-          <div>⭐ᗪᕼ丅⭐と</div>
-          <div>言われた回数</div>
-        </div>
-      </div>
-    </section>
-
-    <section id="panel-graph" class="panel" role="tabpanel"
-      data-panel="graph" hidden>
+    <section id="tTotal" class="panel active" aria-labelledby="tab-total">
       <div class="card">
-        <div class="chart-wrap">
-          <canvas id="cumulativeChart" aria-label="発言者別の累積回数グラフ"></canvas>
-        </div>
-        <div id="graphDescription" class="description"></div>
+        <div class="big-number" data-dht="total-since-2025">–</div>
+        <div class="caption">⭐ᗪᕼ丅⭐と言われた回数</div>
       </div>
     </section>
 
-    <section id="panel-history" class="panel" role="tabpanel"
-      data-panel="history" hidden>
+    <section id="tTotal2026" class="panel">
       <div class="card">
-        <div class="pager">
-          <button id="historyPrev" class="pager-button" type="button" aria-label="前のページ">◀</button>
-          <div id="historyPageInfo" class="pager-info">–</div>
-          <button id="historyNext" class="pager-button" type="button" aria-label="次のページ">▶</button>
-        </div>
-
-        <div class="table-wrap">
-          <table class="history-table">
-            <thead>
-              <tr>
-                <th class="date-column">日付</th>
-                <th class="name-column">発言者</th>
-                <th>リンク</th>
-              </tr>
-            </thead>
-            <tbody id="historyBody">
-              <tr><td colspan="3" class="empty-cell">タブを開くと読み込みます</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <div class="big-number" data-dht="total-current-year">–</div>
+        <div class="caption"><span data-dht="year">2026</span>年に⭐ᗪᕼ丅⭐と言われた回数</div>
       </div>
     </section>
 
-    <section id="panel-fig-2025" class="panel" role="tabpanel"
-      data-panel="fig-2025" hidden>
-      <div class="card figure-card">
-        <div class="figure-number">
-          <span id="fig2025CValue">–</span>
-          <span class="dash">−</span>
-          <span id="fig2025OthersValue">–</span>
-        </div>
-        <div class="figure-labels">
-          <div class="figure-label figure-label-left">
-            <div>Cさんに　　↑</div>
-            <div>⭐ᗪᕼ丅⭐と</div>
-            <div>言われた回数</div>
+    <section id="tRanking2026" class="panel">
+      <div class="card">
+        <h2>DHT Championship <span data-dht="year">2026</span></h2>
+
+        <!-- 1〜3位。main.jsが最低限のDOMを生成します。Claude側で自由に再描画可能です。 -->
+        <div id="rankingPodium" class="dht-ranking-podium" aria-label="上位3名"></div>
+
+        <!-- 4位以下。main.jsが最低限のDOMを生成します。 -->
+        <div id="rankingList" class="dht-ranking-list" aria-label="4位以下"></div>
+      </div>
+    </section>
+
+    <section id="tFig2025" class="panel">
+      <div class="card">
+        <div class="fig-2025">
+          <div>
+            <span data-dht="fig-2025-c">–</span>
+            <span class="label">Cさん</span>
           </div>
-          <div class="figure-label figure-label-right">
-            <div>↑　　他の人に</div>
-            <div>⭐ᗪᕼ丅⭐と</div>
-            <div>言われた回数</div>
+          <div aria-hidden="true">−</div>
+          <div>
+            <span data-dht="fig-2025-others">–</span>
+            <span class="label">その他</span>
           </div>
         </div>
+        <div class="fig-total">合計 <span data-dht="fig-2025-total">–</span>回</div>
       </div>
     </section>
   </main>
 
-  <noscript>
-    <p class="noscript">このページにはJavaScriptが必要です。</p>
-  </noscript>
+  <script>
+    (() => {
+      const tabs = document.querySelectorAll('.tab');
+      const panels = document.querySelectorAll('.panel');
+
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const target = tab.dataset.tab;
+          tabs.forEach((item) => item.classList.toggle('active', item === tab));
+          panels.forEach((panel) => panel.classList.toggle('active', panel.id === target));
+        });
+      });
+    })();
+  </script>
+
+  <script src="./js/config.js"></script>
+  <script src="./js/api.js"></script>
+  <script src="./js/main.js"></script>
 </body>
 </html>
