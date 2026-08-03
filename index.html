@@ -4,11 +4,28 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>リンさんカウンター</title>
-  <link rel="stylesheet" href="./css/style.css?v=20260803-3" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="./css/style.css?v=20260803-4" />
 </head>
 <body>
+  <div class="bg-deco" aria-hidden="true">
+    <span class="blob blob--1"></span>
+    <span class="blob blob--2"></span>
+    <span class="blob blob--3"></span>
+  </div>
+
   <header class="header">
-    <h1 class="title">リンさんカウンター</h1>
+    <p class="eyebrow">仲間内公式・非公認記録</p>
+    <h1 class="title">
+      <span class="title__emoji" aria-hidden="true">🏆</span>
+      <span class="title__text">リンさんカウンター</span>
+      <span class="title__emoji title__emoji--right" aria-hidden="true">📣</span>
+    </h1>
+    <p class="tagline">⭐ᗪᕼ丅⭐ と言われた回数を、ひたすら数えるだけのサイト</p>
     <div id="meta" class="meta" data-dht="status" aria-live="polite"></div>
   </header>
 
@@ -21,44 +38,82 @@
 
   <main class="content">
     <section id="tTotal" class="panel active" role="tabpanel" aria-labelledby="tab-total">
-      <div class="card card--center">
+      <div class="card card--center card--total">
+        <div class="sticker sticker--since" aria-hidden="true">SINCE 2025</div>
+        <div class="spark-field" aria-hidden="true">
+          <span class="spark">✨</span>
+          <span class="spark">💫</span>
+          <span class="spark">⭐</span>
+          <span class="spark">✨</span>
+        </div>
+        <p class="number-label">通算カウント</p>
         <div class="big-number" data-dht="total-since-2025">–</div>
         <div class="caption">⭐ᗪᕼ丅⭐と言われた回数</div>
+        <p class="number-note">記録は今日も更新中</p>
       </div>
     </section>
 
     <section id="tTotal2026" class="panel" role="tabpanel" aria-labelledby="tab-total-2026" hidden>
-      <div class="card card--center">
+      <div class="card card--center card--total card--year">
+        <div class="sticker sticker--year" aria-hidden="true">THIS YEAR</div>
+        <div class="spark-field" aria-hidden="true">
+          <span class="spark">🔥</span>
+          <span class="spark">✨</span>
+          <span class="spark">💥</span>
+          <span class="spark">⭐</span>
+        </div>
+        <p class="number-label">今年の戦績</p>
         <div class="big-number" data-dht="total-current-year">–</div>
         <div class="caption"><span data-dht="year">2026</span>年に⭐ᗪᕼ丅⭐と言われた回数</div>
+        <p class="number-note">シーズンはまだ終わっていない</p>
       </div>
     </section>
 
     <section id="tRanking2026" class="panel" role="tabpanel" aria-labelledby="tab-ranking-2026" hidden>
       <div class="card ranking-card">
-        <h2>DHT Championship <span data-dht="year">2026</span></h2>
+        <div id="confettiLayer" class="confetti-layer" aria-hidden="true"></div>
+
+        <div class="champ-head">
+          <p class="champ-eyebrow">🎉 ANNUAL AWARD 🎉</p>
+          <h2>DHT Championship <span data-dht="year">2026</span></h2>
+          <p class="champ-sub">今年いちばん言ってきたのは誰だ</p>
+        </div>
+
         <div id="rankingPodium" class="dht-ranking-podium" aria-label="上位3名"></div>
+
+        <p class="list-heading"><span>4位以下のみなさん</span></p>
         <div id="rankingList" class="dht-ranking-list" aria-label="4位以下"></div>
       </div>
     </section>
 
     <section id="tFig2025" class="panel" role="tabpanel" aria-labelledby="tab-fig-2025" hidden>
-      <div class="card card--center">
+      <div class="card card--center card--fig">
+        <div class="stamp" aria-hidden="true">2025<br />RECORD</div>
+        <p class="number-label">2025年 最終スコア</p>
+
         <div class="fig-2025">
-          <div class="fig-side">
+          <div class="fig-side fig-side--c">
+            <span class="fig-crest" aria-hidden="true">🐤</span>
             <span class="fig-number" data-dht="fig-2025-c">–</span>
             <span class="fig-label">Cさん</span>
           </div>
-          <div class="fig-dash" aria-hidden="true">−</div>
-          <div class="fig-side">
+          <div class="fig-dash" aria-hidden="true">VS</div>
+          <div class="fig-side fig-side--others">
+            <span class="fig-crest" aria-hidden="true">👥</span>
             <span class="fig-number" data-dht="fig-2025-others">–</span>
             <span class="fig-label">その他</span>
           </div>
         </div>
+
         <div class="fig-total">合計 <span data-dht="fig-2025-total">–</span>回</div>
+        <p class="number-note">2025年シーズン、確定済み</p>
       </div>
     </section>
   </main>
+
+  <footer class="footer">
+    <p>集計はGASまかせ。文句はリンさんまで。</p>
+  </footer>
 
   <script>
     (() => {
@@ -88,8 +143,9 @@
     })();
   </script>
 
-  <script src="./js/config.js?v=20260803-3"></script>
-  <script src="./js/api.js?v=20260803-3"></script>
-  <script src="./js/main.js?v=20260803-3"></script>
+  <script src="./js/config.js?v=20260803-4"></script>
+  <script src="./js/api.js?v=20260803-4"></script>
+  <script src="./js/main.js?v=20260803-4"></script>
+  <script src="./js/ranking-anim.js?v=20260803-4"></script>
 </body>
 </html>
