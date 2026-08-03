@@ -1,136 +1,122 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
   <title>リンさんカウンター</title>
 
-  <link rel="stylesheet" href="./css/style.css?v=76" />
+  <link rel="stylesheet" href="./css/style.css?v=1">
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script defer src="./js/config.js?v=1"></script>
+  <script defer src="./js/api.js?v=1"></script>
+  <script defer src="./js/main.js?v=1"></script>
 </head>
-
 <body>
   <header class="header">
-    <noscript>
-      <div class="noscript">
-        JavaScript が無効です（noscript表示）
-      </div>
-    </noscript>
-
     <h1 class="title">リンさんカウンター</h1>
-    <!-- meta表示を使うならコメント解除 -->
-    <!-- <div id="meta" class="meta"></div> -->
+    <p id="status" class="status" role="status" aria-live="polite">読み込み中…</p>
   </header>
 
-  <!-- DEPLOY_MARK: 2025-12-31-XXXX -->
-
-  <nav class="tabs" role="tablist" aria-label="tabs">
-    <button class="tab active" data-tab="tTotal" role="tab">Total Since 2025</button>
-    <button class="tab" data-tab="tTotal2026" role="tab">Total 2026</button>
-    <button class="tab" data-tab="tGraph2026" role="tab">Graph 2026</button>
-    <button class="tab" data-tab="tHistory2026" role="tab">History 2026</button>
-    <button class="tab" data-tab="tFig2025" role="tab">Fig 2025</button>
+  <nav class="tabs" aria-label="表示切り替え" role="tablist">
+    <button class="tab is-active" type="button" role="tab"
+      aria-selected="true" aria-controls="panel-total" data-tab="total">
+      Total Since 2025
+    </button>
+    <button id="yearTotalTab" class="tab" type="button" role="tab"
+      aria-selected="false" aria-controls="panel-year-total" data-tab="year-total">
+      Total
+    </button>
+    <button id="graphTab" class="tab" type="button" role="tab"
+      aria-selected="false" aria-controls="panel-graph" data-tab="graph">
+      Graph
+    </button>
+    <button id="historyTab" class="tab" type="button" role="tab"
+      aria-selected="false" aria-controls="panel-history" data-tab="history">
+      History
+    </button>
+    <button class="tab" type="button" role="tab"
+      aria-selected="false" aria-controls="panel-fig-2025" data-tab="fig-2025">
+      Fig 2025
+    </button>
   </nav>
 
   <main class="content">
-
-    <!-- Total Since 2025 (default active) -->
-    <section id="tTotal" class="panel active" role="tabpanel">
-      <div class="card fig-grid total-only">
-        <!-- 数字（1つだけ・センター） -->
-        <div class="big-number total-number">
-          <span id="totalLeftValue">–</span>
-        </div>
-
-        <!-- 数字の直下：センタリング文言（3行固定） -->
-        <div class="note-row total-note">
-          <div class="note note-center">
-            <div>↑</div>
-            <div>⭐ᗪᕼ丅⭐と</div>
-            <div>言われた回数</div>
-          </div>
+    <section id="panel-total" class="panel" role="tabpanel" data-panel="total">
+      <div class="card total-card">
+        <div id="totalValue" class="big-number">–</div>
+        <div class="counter-caption">
+          <div class="arrow">↑</div>
+          <div>⭐ᗪᕼ丅⭐と</div>
+          <div>言われた回数</div>
         </div>
       </div>
     </section>
 
-    <!-- Total 2026 -->
-    <section id="tTotal2026" class="panel" role="tabpanel">
-      <div class="card fig-grid total-only">
-        <!-- 数字（1つだけ・センター） -->
-        <div class="big-number total-number">
-          <span id="total2026Value">–</span>
-        </div>
-
-        <!-- 数字の直下：センタリング文言（3行固定） -->
-        <div class="note-row total-note">
-          <div class="note note-center">
-            <div>↑</div>
-            <div>⭐ᗪᕼ丅⭐と</div>
-            <div>言われた回数</div>
-          </div>
+    <section id="panel-year-total" class="panel" role="tabpanel"
+      data-panel="year-total" hidden>
+      <div class="card total-card">
+        <div id="yearTotalValue" class="big-number">–</div>
+        <div class="counter-caption">
+          <div class="arrow">↑</div>
+          <div>⭐ᗪᕼ丅⭐と</div>
+          <div>言われた回数</div>
         </div>
       </div>
     </section>
 
-    <!-- Graph 2026 -->
-    <section id="tGraph2026" class="panel" role="tabpanel">
+    <section id="panel-graph" class="panel" role="tabpanel"
+      data-panel="graph" hidden>
       <div class="card">
         <div class="chart-wrap">
-          <canvas id="cumChart"></canvas>
+          <canvas id="cumulativeChart" aria-label="発言者別の累積回数グラフ"></canvas>
         </div>
-
-        <!-- もし .desc のCSSが無いなら style.css に追加が必要 -->
-        <div class="desc">
-          <div>横軸：2026-01-01 を 1日目とした日数</div>
-          <div>縦軸：累積回数</div>
-        </div>
+        <div id="graphDescription" class="description"></div>
       </div>
     </section>
 
-    <!-- History 2026 -->
-    <section id="tHistory2026" class="panel" role="tabpanel">
+    <section id="panel-history" class="panel" role="tabpanel"
+      data-panel="history" hidden>
       <div class="card">
         <div class="pager">
-          <button id="histPrev" class="pager-btn" type="button" aria-label="prev">◀</button>
-          <div id="histPageInfo" class="pager-info">–</div>
-          <button id="histNext" class="pager-btn" type="button" aria-label="next">▶</button>
+          <button id="historyPrev" class="pager-button" type="button" aria-label="前のページ">◀</button>
+          <div id="historyPageInfo" class="pager-info">–</div>
+          <button id="historyNext" class="pager-button" type="button" aria-label="次のページ">▶</button>
         </div>
 
         <div class="table-wrap">
-          <table class="hist-table">
+          <table class="history-table">
             <thead>
               <tr>
-                <th class="col-date">日付</th>
-                <th class="col-name">発言者</th>
-                <th class="col-url">リンク</th>
+                <th class="date-column">日付</th>
+                <th class="name-column">発言者</th>
+                <th>リンク</th>
               </tr>
             </thead>
-            <tbody id="histBody">
-              <tr><td colspan="3" class="hist-empty">読み込み中…</td></tr>
+            <tbody id="historyBody">
+              <tr><td colspan="3" class="empty-cell">タブを開くと読み込みます</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </section>
 
-    <!-- Fig 2025 -->
-    <section id="tFig2025" class="panel" role="tabpanel">
-      <div class="card fig-grid">
-        <div class="big-number">
-          <span id="fig2025LeftValue">–</span>
-          <span class="dash"> − </span>
-          <span id="fig2025RightValue">–</span>
+    <section id="panel-fig-2025" class="panel" role="tabpanel"
+      data-panel="fig-2025" hidden>
+      <div class="card figure-card">
+        <div class="figure-number">
+          <span id="fig2025CValue">–</span>
+          <span class="dash">−</span>
+          <span id="fig2025OthersValue">–</span>
         </div>
-
-        <div class="note-row">
-          <div class="note note-left">
+        <div class="figure-labels">
+          <div class="figure-label figure-label-left">
             <div>Cさんに　　↑</div>
             <div>⭐ᗪᕼ丅⭐と</div>
             <div>言われた回数</div>
           </div>
-          <div class="note note-right">
+          <div class="figure-label figure-label-right">
             <div>↑　　他の人に</div>
             <div>⭐ᗪᕼ丅⭐と</div>
             <div>言われた回数</div>
@@ -138,23 +124,10 @@
         </div>
       </div>
     </section>
-
   </main>
 
-  <!-- boot marker -->
-  <script>
-    window.__boot = [];
-    window.__mark = (s) => {
-      window.__boot.push(s);
-      const el = document.getElementById('meta');
-      if (el) el.textContent = 'BOOT: ' + window.__boot.join(' > ');
-    };
-    __mark('inline');
-  </script>
-
-  <script src="js/config.js?v=76"></script>
-  <script src="js/api.js?v=76"></script>
-  <script src="js/main.js?v=76"></script>
-
+  <noscript>
+    <p class="noscript">このページにはJavaScriptが必要です。</p>
+  </noscript>
 </body>
 </html>
