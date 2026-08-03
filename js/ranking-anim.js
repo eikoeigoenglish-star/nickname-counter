@@ -22,6 +22,25 @@
   const rankingList = document.getElementById('rankingList');
   const confettiLayer = document.getElementById('confettiLayer');
 
+  const NUMBER_THEME_CLASSES = [
+    'number-theme--sunset',
+    'number-theme--berry',
+    'number-theme--carnival',
+  ];
+
+  const applyRandomNumberThemes = () => {
+    const numbers = [
+      document.querySelector('[data-dht="total-since-2025"]'),
+      document.querySelector('[data-dht="total-current-year"]'),
+    ].filter(Boolean);
+
+    numbers.forEach((element) => {
+      NUMBER_THEME_CLASSES.forEach((className) => element.classList.remove(className));
+      const className = NUMBER_THEME_CLASSES[Math.floor(Math.random() * NUMBER_THEME_CLASSES.length)];
+      element.classList.add(className);
+    });
+  };
+
   const COUNTUP_SELECTOR = [
     '[data-dht="total-since-2025"]',
     '[data-dht="total-current-year"]',
@@ -190,6 +209,8 @@
     const visible = panels.find((panel) => !panel.hidden);
     if (visible) handlePanelShown(visible);
   };
+
+  applyRandomNumberThemes();
 
   document.addEventListener('dht:ready', onDataReady);
 
