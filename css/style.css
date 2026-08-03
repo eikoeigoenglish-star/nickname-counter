@@ -1,393 +1,366 @@
-/* style.css (FULL REPLACE / refactored) */
-
-/* ------------------------------
-   Base
------------------------------- */
-:root{
-  --bg: #5c6673;
-  --card: rgba(0,0,0,.18);
-  --text: #f1f5f9;
-  --muted: rgba(255,255,255,.75);
-  --muted2: rgba(255,255,255,.55);
-
-  --radius: 28px;
-  --radius2: 18px;
-
-  --maxw: 1100px;
-
-  /* “Total系”の見た目を揃えるための共通スケール */
-  --total-num: clamp(96px, 12vw, 180px);
-  --total-note: 28px;
-  --total-arrow: 32px;
+:root {
+  --background: #5c6673;
+  --card: rgba(0, 0, 0, 0.18);
+  --surface: rgba(255, 255, 255, 0.14);
+  --surface-active: rgba(255, 255, 255, 0.24);
+  --text: #f8fafc;
+  --muted: rgba(255, 255, 255, 0.76);
+  --faint: rgba(255, 255, 255, 0.54);
+  --border: rgba(255, 255, 255, 0.10);
+  --radius-large: 28px;
+  --radius-medium: 18px;
+  --max-width: 1100px;
 }
 
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
+* {
+  box-sizing: border-box;
+}
 
-body{
-  margin:0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP",
-               "Hiragino Kaku Gothic ProN", "Meiryo", Arial, sans-serif;
+html {
+  min-height: 100%;
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
   color: var(--text);
-  background: var(--bg);
-  line-height:1.3;
+  background: var(--background);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP",
+    "Hiragino Kaku Gothic ProN", Meiryo, Arial, sans-serif;
+  line-height: 1.4;
 }
 
-/* ------------------------------
-   Header
------------------------------- */
-.header{
-  max-width: var(--maxw);
-  margin: 24px auto 10px;
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.header {
+  max-width: var(--max-width);
+  margin: 24px auto 8px;
   padding: 0 18px;
-  text-align:center;
-}
-.title{
-  margin: 18px 0 10px;
-  font-size: clamp(28px, 5vw, 56px);
-  font-weight: 800;
-  letter-spacing: .02em;
-}
-.meta{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  font-size: 16px;
-  color: var(--muted);
-  margin-bottom: 10px;
+  text-align: center;
 }
 
-/* ------------------------------
-   Tabs
------------------------------- */
-.tabs{
-  max-width: var(--maxw);
+.title {
+  margin: 0;
+  font-size: clamp(30px, 5vw, 56px);
+  font-weight: 850;
+  letter-spacing: 0.02em;
+}
+
+.status {
+  min-height: 1.5em;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.status.is-error {
+  color: #ffe3e3;
+  font-weight: 700;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  max-width: var(--max-width);
   margin: 18px auto 16px;
   padding: 0 18px;
-  display:flex;
-  gap: 16px;
-  justify-content:center;
-  flex-wrap: wrap;
 }
 
-.tab{
+.tab,
+.pager-button {
   border: 0;
-  cursor:pointer;
   color: var(--text);
-  background: rgba(255,255,255,.14);
-  border-radius: 18px;
-  padding: 16px 26px;
-  font-size: 22px;
+  background: var(--surface);
+  cursor: pointer;
+  font: inherit;
   font-weight: 800;
-  letter-spacing:.02em;
-  box-shadow: inset 0 0 0 3px rgba(255,255,255,.06);
-}
-.tab.active{
-  background: rgba(255,255,255,.22);
-  box-shadow: inset 0 0 0 3px rgba(255,255,255,.22);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.06);
+  transition: background 120ms ease, transform 120ms ease;
 }
 
-/* ------------------------------
-   Panels
------------------------------- */
-.content{
-  max-width: var(--maxw);
+.tab {
+  padding: 15px 24px;
+  border-radius: var(--radius-medium);
+  font-size: clamp(17px, 2.2vw, 22px);
+}
+
+.tab:hover,
+.pager-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.20);
+}
+
+.tab:active,
+.pager-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.tab.is-active {
+  background: var(--surface-active);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.22);
+}
+
+.tab:focus-visible,
+.pager-button:focus-visible,
+a:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 3px;
+}
+
+.content {
+  max-width: var(--max-width);
   margin: 0 auto 40px;
   padding: 0 18px;
 }
-.panel{ display:none; }
-.panel.active{ display:block; }
 
-/* ------------------------------
-   Card
------------------------------- */
-.card{
-  background: var(--card);
-  border-radius: var(--radius);
-  padding: 42px 44px;
+.panel[hidden] {
+  display: none;
+}
+
+.card {
   min-height: 520px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.15);
+  padding: 42px 44px;
+  border-radius: var(--radius-large);
+  background: var(--card);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
 
-/* ------------------------------
-   fig-grid (Tab1/Tab2 style container)
------------------------------- */
-.fig-grid{
-  display:grid;
-  grid-template-columns: 1fr minmax(0, 720px) 1fr;
-  grid-template-rows: auto auto auto;
-  row-gap: 22px;
-  align-content: start;
-}
-
-/* big number (center) */
-.big-number{
-  grid-column: 2;
-  grid-row: 1;
-
+.total-card {
   display: flex;
-  justify-content: center;
-  align-items: baseline;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-
-  text-align: center;
-  font-weight: 900;
-  letter-spacing: .02em;
-  line-height: 1;
-
-  /* “通常”のfig用：ここは控えめ（Total系はIDで上書きする） */
-  font-size: clamp(56px, 10vw, 124px);
-
-  margin-top: 40px;
-}
-.big-number > span{ display:inline-block; }
-.big-number .dash{
-  margin: 0 .22em;
-  opacity: .55;
-}
-
-/* note row (default: left/right) */
-.note-row{
-  grid-column: 2;
-  grid-row: 2;
-
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 24px;
-  align-items:start;
-}
-.note{
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--muted);
-  line-height: 1.1;
-  white-space: nowrap;
-}
-.note-left{ justify-self: start; text-align:left; }
-.note-right{ justify-self: end; text-align:right; }
-
-/* subline */
-.subline{
-  grid-column: 2;
-  grid-row: 3;
-  display:flex;
-  gap: 48px;
-  justify-content:center;
-  align-items:center;
-  font-size: 30px;
-  font-weight: 800;
-  color: var(--muted2);
-  margin-top: 12px;
-}
-
-/* ------------------------------
-   TOTAL TABS (unified)
-   - #tTotal: big-number + note-row (center)
-   - #tTotal2026: total-center + total-number + total-caption (center)
-   どちらでも “同じ大きさ” になるように揃える
------------------------------- */
-
-/* 共通：Totalタブは説明文を中央寄せ */
-#tTotal .note-row,
-#tTotal2026 .note-row{
-  display:flex;
-  justify-content:center;
-  margin-top: 24px;
-}
-#tTotal .note,
-#tTotal2026 .note{
-  text-align:center;
-  color: var(--muted);
-  font-weight: 800;
-  line-height: 1.1;
-}
-#tTotal .note > div,
-#tTotal2026 .note > div{
-  width: 100%;
-}
-
-/* Total Since 2025：big-number内の数字（span）を巨大化 */
-#tTotal .big-number{
-  justify-content:center;
-}
-#tTotal .big-number > span{
-  font-size: var(--total-num);
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  line-height: 1.0;
-}
-
-/* Total 2026：total-center方式（あなたのHTMLがこれ） */
-.total-center{
-  display:flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  height: 100%;
-}
-.total-number{
-  font-size: var(--total-num);
-  font-weight: 800;
-  color: #ffffff;
-  letter-spacing: 0.02em;
-  line-height: 1.0;
-  margin: 0;
-}
-.total-caption{
+  justify-content: flex-start;
+  padding-top: 80px;
   text-align: center;
-  color: var(--muted);
-  font-size: var(--total-note);
-  font-weight: 800;
-  line-height: 1.1;
-  margin-top: 24px;
-}
-.total-caption .arrow{
-  display:block;
-  font-size: var(--total-arrow);
-  margin: 0 0 6px 0;
 }
 
-/* 念のため：Total 2026 が big-number方式になっても同サイズにする */
-#tTotal2026 .big-number > span{
-  font-size: var(--total-num);
-  font-weight: 800;
+.big-number {
+  font-size: clamp(96px, 12vw, 180px);
+  font-weight: 850;
   letter-spacing: 0.02em;
-  line-height: 1.0;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
-/* ------------------------------
-   Chart
------------------------------- */
-.chart-wrap{
-  background: var(--card);
-  border-radius: var(--radius);
-  padding: 18px;
+.counter-caption {
+  margin-top: 28px;
+  color: var(--muted);
+  font-size: clamp(20px, 2.7vw, 28px);
+  font-weight: 800;
+  line-height: 1.12;
+}
+
+.counter-caption .arrow {
+  margin-bottom: 5px;
+  font-size: 1.15em;
+}
+
+.chart-wrap {
   height: 560px;
-}
-#cumChart{
-  width:100% !important;
-  height:100% !important;
-}
-
-/* ------------------------------
-   Placeholder
------------------------------- */
-.placeholder{
-  opacity:.7;
-  text-align:center;
-  font-size: 26px;
-  padding: 60px 0;
+  padding: 18px;
+  border-radius: var(--radius-large);
+  background: rgba(0, 0, 0, 0.12);
 }
 
-/* ------------------------------
-   History table + pager
------------------------------- */
-.pager{
-  display:flex;
-  align-items:center;
-  justify-content:center;
+#cumulativeChart {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.description {
+  margin-top: 16px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 16px;
   margin-bottom: 18px;
 }
-.pager-btn{
-  border: 0;
-  cursor: pointer;
-  color: var(--text);
-  background: rgba(255,255,255,.14);
-  border-radius: 14px;
+
+.pager-button {
   padding: 10px 14px;
+  border-radius: 14px;
   font-size: 20px;
-  font-weight: 900;
-  box-shadow: inset 0 0 0 3px rgba(255,255,255,.06);
 }
-.pager-btn:disabled{
-  opacity: .35;
+
+.pager-button:disabled {
+  opacity: 0.34;
   cursor: default;
 }
-.pager-info{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+.pager-info {
+  min-width: 190px;
   color: var(--muted);
-  font-size: 16px;
-  min-width: 160px;
   text-align: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 16px;
 }
-.table-wrap{
+
+.table-wrap {
   overflow-x: auto;
-  border-radius: var(--radius2);
+  border-radius: var(--radius-medium);
 }
-.hist-table{
+
+.history-table {
   width: 100%;
   border-collapse: collapse;
-  background: rgba(0,0,0,.10);
-  border-radius: var(--radius2);
   overflow: hidden;
+  border-radius: var(--radius-medium);
+  background: rgba(0, 0, 0, 0.10);
 }
-.hist-table th,
-.hist-table td{
+
+.history-table th,
+.history-table td {
   padding: 14px 16px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
+  border-bottom: 1px solid var(--border);
   font-size: 18px;
 }
-.hist-table th{
-  text-align: left;
+
+.history-table th {
   color: var(--muted);
-  font-weight: 900;
-  background: rgba(255,255,255,.06);
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+  font-weight: 850;
 }
-.hist-table tr:last-child td{ border-bottom: 0; }
-.col-date{ width: 160px; white-space: nowrap; }
-.col-name{ width: 140px; white-space: nowrap; }
-.col-url a{
+
+.history-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.date-column {
+  width: 160px;
+  white-space: nowrap;
+}
+
+.name-column {
+  width: 140px;
+  white-space: nowrap;
+}
+
+.history-table a {
   color: var(--text);
-  text-decoration: underline;
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
-  word-break: break-all;
 }
-.hist-empty{
-  color: var(--muted2);
+
+.empty-cell {
+  padding: 34px 10px !important;
+  color: var(--faint);
   text-align: center;
-  padding: 30px 10px;
 }
 
-/* ------------------------------
-   Responsive
------------------------------- */
-@media (max-width: 900px){
-  .card{ padding: 34px 26px; min-height: 520px; }
-
-  .fig-grid{
-    grid-template-columns: 1fr minmax(0, 520px) 1fr;
-    row-gap: 18px;
-  }
-
-  .note{ font-size: 22px; }
-  .subline{ font-size: 22px; gap: 28px; }
-
-  /* Total系：説明文も少し落とす */
-  :root{
-    --total-note: 22px;
-    --total-arrow: 26px;
-  }
+.figure-card {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 720px) 1fr;
+  grid-template-rows: auto auto;
+  align-content: start;
+  row-gap: 26px;
 }
 
-@media (max-width: 560px){
-  .tabs{ gap: 10px; }
-  .tab{ font-size: 18px; padding: 14px 18px; }
+.figure-number {
+  grid-column: 2;
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  margin-top: 42px;
+  white-space: nowrap;
+  font-size: clamp(56px, 10vw, 124px);
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
 
-  .fig-grid{
-    grid-template-columns: 10px 1fr 10px;
+.figure-number .dash {
+  margin: 0 0.22em;
+  opacity: 0.55;
+}
+
+.figure-labels {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 24px;
+}
+
+.figure-label {
+  color: var(--muted);
+  font-size: clamp(18px, 2.7vw, 28px);
+  font-weight: 800;
+  line-height: 1.12;
+  white-space: nowrap;
+}
+
+.figure-label-left {
+  justify-self: start;
+  text-align: left;
+}
+
+.figure-label-right {
+  justify-self: end;
+  text-align: right;
+}
+
+.noscript {
+  padding: 20px;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .header {
+    margin-top: 18px;
   }
-  .big-number{ margin-top: 28px; }
 
-  .note-row{
-    grid-template-columns: 1fr 1fr;
-    column-gap: 14px;
+  .tabs {
+    gap: 9px;
   }
-  .note{ font-size: 18px; }
-  .subline{ font-size: 18px; gap: 18px; }
 
-  /* Total系：さらに少し落とす */
-  :root{
-    --total-note: 18px;
-    --total-arrow: 22px;
+  .tab {
+    padding: 12px 14px;
+  }
+
+  .card {
+    min-height: 470px;
+    padding: 28px 20px;
+  }
+
+  .total-card {
+    padding-top: 68px;
+  }
+
+  .chart-wrap {
+    height: 440px;
+    padding: 8px;
+  }
+
+  .history-table th,
+  .history-table td {
+    padding: 12px 10px;
+    font-size: 16px;
+  }
+
+  .date-column {
+    width: 120px;
+  }
+
+  .name-column {
+    width: 105px;
+  }
+
+  .figure-card {
+    grid-template-columns: 8px 1fr 8px;
+  }
+
+  .figure-labels {
+    column-gap: 12px;
   }
 }
