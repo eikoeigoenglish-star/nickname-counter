@@ -4,9 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>リンさんカウンター</title>
-
-  <!-- デザインとアニメーションはClaude側で追加・置換してください -->
-  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="./css/style.css?v=20260803-3" />
 </head>
 <body>
   <header class="header">
@@ -14,51 +12,47 @@
     <div id="meta" class="meta" data-dht="status" aria-live="polite"></div>
   </header>
 
-  <nav class="tabs" aria-label="表示切り替え">
-    <button type="button" class="tab active" data-tab="tTotal">Total Since 2025</button>
-    <button type="button" class="tab" data-tab="tTotal2026">Total 2026</button>
-    <button type="button" class="tab" data-tab="tRanking2026">Ranking 2026</button>
-    <button type="button" class="tab" data-tab="tFig2025">Fig 2025</button>
+  <nav class="tabs" role="tablist" aria-label="表示切り替え">
+    <button id="tab-total" type="button" class="tab active" role="tab" aria-selected="true" aria-controls="tTotal" data-tab="tTotal">Total Since 2025</button>
+    <button id="tab-total-2026" type="button" class="tab" role="tab" aria-selected="false" aria-controls="tTotal2026" data-tab="tTotal2026">Total 2026</button>
+    <button id="tab-ranking-2026" type="button" class="tab" role="tab" aria-selected="false" aria-controls="tRanking2026" data-tab="tRanking2026">Ranking 2026</button>
+    <button id="tab-fig-2025" type="button" class="tab" role="tab" aria-selected="false" aria-controls="tFig2025" data-tab="tFig2025">Fig 2025</button>
   </nav>
 
   <main class="content">
-    <section id="tTotal" class="panel active" aria-labelledby="tab-total">
-      <div class="card">
+    <section id="tTotal" class="panel active" role="tabpanel" aria-labelledby="tab-total">
+      <div class="card card--center">
         <div class="big-number" data-dht="total-since-2025">–</div>
         <div class="caption">⭐ᗪᕼ丅⭐と言われた回数</div>
       </div>
     </section>
 
-    <section id="tTotal2026" class="panel">
-      <div class="card">
+    <section id="tTotal2026" class="panel" role="tabpanel" aria-labelledby="tab-total-2026" hidden>
+      <div class="card card--center">
         <div class="big-number" data-dht="total-current-year">–</div>
         <div class="caption"><span data-dht="year">2026</span>年に⭐ᗪᕼ丅⭐と言われた回数</div>
       </div>
     </section>
 
-    <section id="tRanking2026" class="panel">
-      <div class="card">
+    <section id="tRanking2026" class="panel" role="tabpanel" aria-labelledby="tab-ranking-2026" hidden>
+      <div class="card ranking-card">
         <h2>DHT Championship <span data-dht="year">2026</span></h2>
-
-        <!-- 1〜3位。main.jsが最低限のDOMを生成します。Claude側で自由に再描画可能です。 -->
         <div id="rankingPodium" class="dht-ranking-podium" aria-label="上位3名"></div>
-
-        <!-- 4位以下。main.jsが最低限のDOMを生成します。 -->
         <div id="rankingList" class="dht-ranking-list" aria-label="4位以下"></div>
       </div>
     </section>
 
-    <section id="tFig2025" class="panel">
-      <div class="card">
+    <section id="tFig2025" class="panel" role="tabpanel" aria-labelledby="tab-fig-2025" hidden>
+      <div class="card card--center">
         <div class="fig-2025">
-          <div>
-            <span data-dht="fig-2025-c">–</span>
-            <span class="label">Cさん</span>
+          <div class="fig-side">
+            <span class="fig-number" data-dht="fig-2025-c">–</span>
+            <span class="fig-label">Cさん</span>
           </div>
-          <div aria-hidden="true">−</div>
-          <div>
-            <span data-dht="fig-2025-others">–</span>
-            <span class="label">その他</span>
+          <div class="fig-dash" aria-hidden="true">−</div>
+          <div class="fig-side">
+            <span class="fig-number" data-dht="fig-2025-others">–</span>
+            <span class="fig-label">その他</span>
           </div>
         </div>
         <div class="fig-total">合計 <span data-dht="fig-2025-total">–</span>回</div>
@@ -68,21 +62,34 @@
 
   <script>
     (() => {
-      const tabs = document.querySelectorAll('.tab');
-      const panels = document.querySelectorAll('.panel');
+      const tabs = [...document.querySelectorAll('[role="tab"]')];
+      const panels = [...document.querySelectorAll('[role="tabpanel"]')];
+
+      const activate = (targetId) => {
+        tabs.forEach((tab) => {
+          const selected = tab.dataset.tab === targetId;
+          tab.classList.toggle('active', selected);
+          tab.setAttribute('aria-selected', String(selected));
+          tab.tabIndex = selected ? 0 : -1;
+        });
+
+        panels.forEach((panel) => {
+          const selected = panel.id === targetId;
+          panel.classList.toggle('active', selected);
+          panel.hidden = !selected;
+        });
+      };
 
       tabs.forEach((tab) => {
-        tab.addEventListener('click', () => {
-          const target = tab.dataset.tab;
-          tabs.forEach((item) => item.classList.toggle('active', item === tab));
-          panels.forEach((panel) => panel.classList.toggle('active', panel.id === target));
-        });
+        tab.addEventListener('click', () => activate(tab.dataset.tab));
       });
+
+      activate('tTotal');
     })();
   </script>
 
-  <script src="./js/config.js"></script>
-  <script src="./js/api.js"></script>
-  <script src="./js/main.js"></script>
+  <script src="./js/config.js?v=20260803-3"></script>
+  <script src="./js/api.js?v=20260803-3"></script>
+  <script src="./js/main.js?v=20260803-3"></script>
 </body>
 </html>
