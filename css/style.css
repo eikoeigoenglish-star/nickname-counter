@@ -1043,7 +1043,7 @@ body::before {
 
 
 /* =========================================================
-   Total numbers: three random pop gradients
+   Total numbers: five random pop gradients
    ranking-anim.js assigns one class per page load.
    ========================================================= */
 .big-number.number-theme--sunset {
@@ -1071,4 +1071,23 @@ body::before {
   color: transparent;
   filter: drop-shadow(0 4px 0 rgba(255, 255, 255, .95))
           drop-shadow(0 14px 20px rgba(255, 79, 132, .24));
+}
+
+
+.big-number.number-theme--green {
+  background: linear-gradient(180deg, #27d7a1 0%, #26b96f 50%, #b8df3f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 0 rgba(255, 255, 255, .95))
+          drop-shadow(0 14px 20px rgba(39, 215, 161, .25));
+}
+
+.big-number.number-theme--freezer {
+  background: linear-gradient(180deg, #31c8ff 0%, #557dff 48%, #a56cff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 0 rgba(255, 255, 255, .95))
+          drop-shadow(0 14px 20px rgba(49, 200, 255, .28));
 }
