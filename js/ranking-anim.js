@@ -26,6 +26,8 @@
     'number-theme--sunset',
     'number-theme--berry',
     'number-theme--carnival',
+    'number-theme--green',
+    'number-theme--freezer',
   ];
 
   const applyRandomNumberThemes = () => {
